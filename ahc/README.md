@@ -1,7 +1,7 @@
-# templates/ahc — AtCoder Heuristic Contest 用テンプレート
+# ahc — AtCoder Heuristic Contest 用テンプレート
 
 AHC でそのまま使える header-only の C++20 テンプレート集（焼きなまし / ビームサーチ / chokudai サーチ）。
-procon37 の solver core・ヘッダ・CMake には一切依存しない（このディレクトリだけで完結する）。
+外部のヘッダや CMake には依存しない（このディレクトリだけで完結する）。
 標準ライブラリのみ、名前空間は `ahc`、`g++ -std=c++20 -O2 -Wall -Wextra -Wshadow` で警告ゼロ。
 
 ## ファイル一覧
@@ -17,7 +17,7 @@ procon37 の solver core・ヘッダ・CMake には一切依存しない（こ�
 | `build_examples.sh` | 全 examples を `-Werror` でビルド・実行・スモーク検証 + sanitizer + bundle 検証 |
 
 ```bash
-bash templates/ahc/build_examples.sh      # 出力は templates/ahc/build/（.gitignore 済み）
+bash ahc/build_examples.sh      # 出力は ahc/build/（.gitignore 済み）
 AHC_TIME_MS=200 ./build/tsp_sa            # examples は AHC_TIME_MS で時間を短縮できる
 ```
 
@@ -105,7 +105,7 @@ auto res = ahc::chokudai_search(init, cfg);
 AtCoder は単一ファイル提出なので、ローカル include を展開する。
 
 ```bash
-python3 templates/ahc/bundle.py main.cpp -o submit.cpp [-I dir ...]
+python3 ahc/bundle.py main.cpp -o submit.cpp [-I dir ...]
 ```
 
 - `#include "xxx.hpp"` を include 元のディレクトリ → `-I` の順に解決して再帰展開。

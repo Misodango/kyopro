@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # examples を警告ゼロ (-Werror) でビルドし、スモーク条件つきで実行する。
-# 使い方: bash templates/ahc/build_examples.sh
+# 使い方: bash ahc/build_examples.sh
 set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
