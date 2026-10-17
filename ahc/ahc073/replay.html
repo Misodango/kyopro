@@ -1,0 +1,1996 @@
+<title>AHC073 焼きなましリプレイ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Zen+Old+Mincho:wght@700;900&display=swap">
+<style>
+/* 盤が主役の計器的なページ。熱 (ember) を唯一のアクセントにし、3 つの陣を 3 色で見分ける。 */
+:root {
+  --bg: #eef1f4;
+  --panel: #ffffff;
+  --panel-2: #f4f6f8;
+  --fg: #17202b;
+  --muted: #5b6676;
+  --line: #d5dce4;
+  --ember: #c9471a;
+  --on-ember: #ffffff;
+  --calm: #5d7f95;
+  --c0: #b07d00;
+  --c1: #0d8580;
+  --c2: #bf3373;
+  --board: #fbfcfd;
+  --board-grid: #e2e7ed;
+  --dest: #3b4654;
+  --dest-done: #c3cbd4;
+  --walk: #6b7787;
+  --ghost: #8893a1;
+  --glow: 0;
+  --f-display: "Zen Old Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --f-body: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10141b;
+    --panel: #161c25;
+    --panel-2: #1b232e;
+    --fg: #e4e9ef;
+    --muted: #97a3b3;
+    --line: #263040;
+    --ember: #ff7a3d;
+    --on-ember: #10141b;
+    --calm: #6f93a8;
+    --c0: #f2b632;
+    --c1: #3fd0c5;
+    --c2: #ff6fae;
+    --board: #0b0f16;
+    --board-grid: #18202b;
+    --dest: #c9d2dc;
+    --dest-done: #344050;
+    --walk: #8d9bad;
+    --ghost: #6c7889;
+    --glow: 1;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10141b;
+  --panel: #161c25;
+  --panel-2: #1b232e;
+  --fg: #e4e9ef;
+  --muted: #97a3b3;
+  --line: #263040;
+  --ember: #ff7a3d;
+  --on-ember: #10141b;
+  --calm: #6f93a8;
+  --c0: #f2b632;
+  --c1: #3fd0c5;
+  --c2: #ff6fae;
+  --board: #0b0f16;
+  --board-grid: #18202b;
+  --dest: #c9d2dc;
+  --dest-done: #344050;
+  --walk: #8d9bad;
+  --ghost: #6c7889;
+  --glow: 1;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--f-body);
+  font-size: 15px;
+  line-height: 1.7;
+  -webkit-text-size-adjust: 100%;
+}
+.page {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.mono, .num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+a { color: var(--fg); text-decoration-color: var(--ember); text-underline-offset: 3px; text-decoration-thickness: 1.5px; }
+a:hover { color: var(--ember); }
+:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+h1, h2, h3, p, dl, dd, ul, figure { margin: 0; padding: 0; }
+
+/* ---- masthead ---- */
+.masthead { display: grid; gap: 6px; margin-bottom: 22px; }
+.eyebrow {
+  font-family: var(--f-mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--muted);
+}
+.mast-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 28px; }
+.masthead h1 {
+  font-family: var(--f-display); font-weight: 900;
+  font-size: clamp(30px, 4.6vw, 46px); line-height: 1.15; letter-spacing: .03em;
+  text-wrap: balance;
+}
+.lede { color: var(--muted); min-width: 0; flex: 1 1 320px; }
+.links { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 14px; }
+
+/* ---- case bar ---- */
+.casebar {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 14px;
+  padding-block: 14px;
+  border-block: 1px solid var(--line);
+  margin-bottom: 24px;
+}
+.field { display: grid; gap: 3px; min-width: 0; }
+.field > span {
+  font-family: var(--f-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+}
+.field input, .field select, .tools input, .tools select {
+  height: 36px; padding: 0 10px; min-width: 0;
+  font: 500 14px var(--f-mono); font-variant-numeric: tabular-nums;
+  color: var(--fg); background: var(--panel);
+  border: 1px solid var(--line); border-radius: 3px;
+}
+.field select { font-family: var(--f-body); }
+#seed { width: 108px; }
+#t0, #t1 { width: 72px; }
+.btn, .ibtn {
+  height: 36px; padding: 0 14px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font: 500 14px var(--f-body); color: var(--fg); background: var(--panel);
+  border: 1px solid var(--line); border-radius: 3px; cursor: pointer;
+  white-space: nowrap;
+}
+.btn:hover:not(:disabled), .ibtn:hover:not(:disabled) { border-color: var(--muted); }
+.btn:disabled, .ibtn:disabled { opacity: .45; cursor: default; }
+.btn.primary { background: var(--ember); border-color: var(--ember); color: var(--on-ember); font-weight: 700; }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.06); border-color: var(--ember); }
+.btn.quiet { background: transparent; }
+.ibtn { width: 38px; padding: 0; }
+.ibtn svg, .btn svg { width: 16px; height: 16px; fill: currentColor; flex: none; }
+.casebar .grow { flex: 1 1 0; }
+.casemsg { flex-basis: 100%; min-height: 0; font-size: 13px; color: var(--ember); }
+.casemsg:empty { display: none; }
+
+/* ---- stage ---- */
+.stage { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(300px, 1fr); gap: 32px; align-items: start; }
+.stage > * { min-width: 0; }
+.boardcol { display: grid; gap: 14px; }
+.boardwrap {
+  position: relative; width: 100%; max-width: 680px; aspect-ratio: 1 / 1;
+  background: var(--board); border: 1px solid var(--line); border-radius: 3px; overflow: hidden;
+}
+.boardwrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+.status { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
+.status .bar { height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.status .bar i { display: block; height: 100%; width: 0; background: var(--ember); }
+.status .bar.idle i { background: var(--calm); width: 100% !important; }
+#saText { font-family: var(--f-mono); font-variant-numeric: tabular-nums; font-size: 12.5px; overflow-wrap: anywhere; }
+
+.transport { display: grid; gap: 12px; }
+.trow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.speed { display: flex; align-items: center; gap: 10px; margin-left: auto; min-width: 0; }
+.speed > span { font-family: var(--f-mono); font-size: 12px; color: var(--muted); white-space: nowrap; }
+.speed output { font-family: var(--f-mono); font-size: 12.5px; min-width: 7.5em; text-align: right; font-variant-numeric: tabular-nums; }
+input[type="range"] {
+  -webkit-appearance: none; appearance: none; background: transparent; margin: 0; height: 24px; cursor: pointer;
+  accent-color: var(--ember);
+}
+input[type="range"]::-webkit-slider-runnable-track { height: 4px; background: var(--line); border-radius: 2px; }
+input[type="range"]::-moz-range-track { height: 4px; background: var(--line); border-radius: 2px; }
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 16px; height: 16px; margin-top: -6px; border-radius: 50%;
+  background: var(--ember); border: 2px solid var(--panel);
+}
+input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--ember); border: 2px solid var(--panel); }
+input[type="range"]:disabled { cursor: default; opacity: .5; }
+#speed { width: 120px; }
+.seekwrap { position: relative; padding-bottom: 18px; }
+#seek { width: 100%; display: block; }
+.donemark {
+  position: absolute; bottom: 0; left: calc(8px + (100% - 16px) * var(--pos, 1));
+  transform: translateX(-50%);
+  font-family: var(--f-mono); font-size: 11px; color: var(--muted); white-space: nowrap;
+  padding-top: 6px;
+}
+.donemark::before {
+  content: ""; position: absolute; top: -8px; left: 50%; width: 1.5px; height: 10px; background: var(--ember); transform: translateX(-50%);
+}
+.sw { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; padding: 4px 2px; }
+.sw input { width: 16px; height: 16px; margin: 0; accent-color: var(--ember); cursor: pointer; }
+.donenote { font-size: 13px; color: var(--fg); }
+.donenote:empty { display: none; }
+.donenote b { font-weight: 700; color: var(--ember); }
+
+.key { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12.5px; color: var(--muted); }
+.key span { display: inline-flex; align-items: center; gap: 6px; }
+.key i { display: inline-block; flex: none; }
+.k-player { width: 10px; height: 10px; border-radius: 50%; background: var(--ember); }
+.k-ghost { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--ghost); }
+.k-dest { width: 6px; height: 6px; border-radius: 50%; background: var(--dest); }
+.k-start { width: 8px; height: 8px; background: var(--fg); }
+.k-jump { width: 18px; height: 0; border-top: 2px dashed var(--c1); }
+
+/* ---- dashboard ---- */
+.dash { background: var(--panel); border: 1px solid var(--line); border-radius: 3px; }
+.dash > section { padding: 18px 20px; }
+.dash > section + section { border-top: 1px solid var(--line); }
+.cap {
+  font-family: var(--f-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+}
+.score-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 6px 16px; }
+.score-num {
+  font-family: var(--f-display); font-weight: 900; font-variant-numeric: tabular-nums;
+  font-size: clamp(52px, 7vw, 76px); line-height: 1.05; letter-spacing: .01em;
+}
+.score-formula { font-family: var(--f-mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.tri { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.tri dt, .hud dt { font-size: 12px; color: var(--muted); }
+.tri dd { font-family: var(--f-mono); font-weight: 600; font-size: 19px; font-variant-numeric: tabular-nums; line-height: 1.35; }
+.tri dd small { display: block; font-size: 12px; font-weight: 400; color: var(--muted); }
+.hud { display: grid; grid-template-columns: repeat(auto-fit, minmax(124px, 1fr)); gap: 10px 12px; }
+.hud dd { font-family: var(--f-mono); font-weight: 600; font-size: 16px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hud dd span { color: var(--muted); font-weight: 400; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px 0 9px;
+  font-size: 13px; border: 1px solid var(--line); border-radius: 15px; background: var(--panel-2);
+}
+.chip i { width: 12px; height: 12px; border-radius: 50%; border: 2.5px solid currentColor; flex: none; }
+.chip b { color: var(--fg); font-family: var(--f-mono); font-weight: 600; font-variant-numeric: tabular-nums; }
+.chip span { color: var(--fg); }
+.facts { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 12px; font-size: 13px; color: var(--muted); }
+.facts b { color: var(--fg); font-family: var(--f-mono); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.charthead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.charthead h2 { font-size: 15px; font-weight: 700; }
+.chartwrap { position: relative; width: 100%; }
+#chart { display: block; width: 100%; touch-action: pan-y; cursor: crosshair; }
+.readout { font-family: var(--f-mono); font-size: 12px; min-height: 1.6em; margin-top: 6px; color: var(--fg); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.chartcap { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+.chartnote { font-size: 13px; color: var(--muted); }
+
+/* ---- paste / explain ---- */
+.tools { margin-top: 36px; border-top: 1px solid var(--line); }
+.tools > details > summary {
+  list-style: none; cursor: pointer; padding: 16px 0; font-weight: 700; display: flex; align-items: center; gap: 10px;
+}
+.tools > details > summary::-webkit-details-marker { display: none; }
+.tools > details > summary::before {
+  content: ""; width: 7px; height: 7px; border-right: 2px solid var(--ember); border-bottom: 2px solid var(--ember);
+  transform: rotate(-45deg); transition: transform .15s;
+}
+.tools > details[open] > summary::before { transform: rotate(45deg); }
+.paste-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.paste-grid label { display: grid; gap: 4px; min-width: 0; }
+.paste-grid label > span { font-size: 13px; color: var(--muted); }
+textarea {
+  width: 100%; height: 190px; resize: vertical; padding: 10px 12px;
+  font: 400 12.5px/1.5 var(--f-mono); color: var(--fg); background: var(--panel);
+  border: 1px solid var(--line); border-radius: 3px; tab-size: 4;
+}
+textarea.drag { border-color: var(--ember); border-style: dashed; }
+.paste-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
+.pastemsg { font-size: 14px; flex: 1 1 260px; min-width: 0; overflow-wrap: anywhere; }
+.pastemsg.err { color: var(--ember); }
+.pastemsg.ok { color: var(--fg); }
+.pastehint { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+.copybox { margin-top: 10px; }
+.copybox textarea { height: 120px; }
+
+.explain { margin-top: 40px; padding-top: 28px; border-top: 1px solid var(--line); }
+.explain h2 { font-family: var(--f-display); font-weight: 700; font-size: 24px; margin-bottom: 16px; letter-spacing: .03em; }
+.explain dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 36px; }
+.explain dt { font-weight: 700; margin-bottom: 2px; }
+.explain dd { color: var(--muted); max-width: 62ch; }
+.explain code, .pastehint code {
+  font-family: var(--f-mono); font-size: .92em; color: var(--fg); background: var(--panel-2);
+  padding: 1px 6px; border-radius: 3px; border: 1px solid var(--line);
+}
+.foot { margin-top: 28px; font-size: 13px; color: var(--muted); max-width: 80ch; }
+
+@media (max-width: 859px) {
+  .stage { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .explain dl, .paste-grid { grid-template-columns: minmax(0, 1fr); }
+  .page { padding-block: 20px 40px; }
+}
+@media (max-width: 520px) {
+  .dash > section { padding: 16px; }
+  .speed { margin-left: 0; width: 100%; }
+  #speed { flex: 1 1 auto; min-width: 0; }
+  .casebar .btn { flex: 1 1 auto; }
+  .tri dd { font-size: 17px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
+</style>
+<div class="page" id="app" data-phase="init">
+  <header class="masthead">
+    <p class="eyebrow">AtCoder Heuristic Contest 073 · A</p>
+    <div class="mast-row">
+      <h1>焼きなましリプレイ</h1>
+      <p class="lede">128×128 の盤で 150 か所を順に回る。3 つの魔法陣で点対称に跳ぶ。その解を焼きなましで探し、経路を歩きのみの解と並べて再生します。</p>
+    </div>
+    <p class="links">
+      <a href="https://atcoder.jp/contests/ahc073/tasks/ahc073_a" target="_blank" rel="noopener">問題文</a>
+      <a href="https://github.com/Misodango/kyopro/blob/main/ahc/ahc073/main.cpp" target="_blank" rel="noopener">解法 (main.cpp)</a>
+    </p>
+  </header>
+
+  <form class="casebar" id="caseForm" autocomplete="off">
+    <label class="field"><span>seed</span><input id="seed" type="number" min="0" max="4294967295" step="1" value="73" inputmode="numeric"></label>
+    <button class="btn" id="newCase" type="button">新しいケース</button>
+    <label class="field"><span>焼き時間</span>
+      <select id="budget">
+        <option value="1000">1 秒</option>
+        <option value="3000" selected>3 秒</option>
+        <option value="10000">10 秒</option>
+      </select>
+    </label>
+    <label class="field"><span>T0</span><input id="t0" type="number" min="0.01" step="any" value="30" inputmode="decimal"></label>
+    <label class="field"><span>T1</span><input id="t1" type="number" min="0.01" step="any" value="1" inputmode="decimal"></label>
+    <button class="btn primary" id="rerun" type="submit">もう一度焼く</button>
+    <button class="btn" id="abort" type="button" hidden>中断</button>
+    <button class="btn quiet" id="copy" type="button">この解をコピー</button>
+    <p class="casemsg" id="caseMsg" role="status"></p>
+  </form>
+  <div class="copybox" id="copyBox" hidden>
+    <p class="pastehint" id="copyHint">クリップボードに書き込めませんでした。下の欄を選択したので、Ctrl+C (Mac は ⌘C) でコピーしてください。</p>
+    <textarea id="copyText" readonly aria-label="公式出力形式のテキスト" spellcheck="false"></textarea>
+  </div>
+
+  <main class="stage">
+    <section class="boardcol" aria-label="盤面と再生コントロール">
+      <div class="boardwrap" id="boardWrap"><canvas id="board" role="img" aria-label="128×128 の盤。目的地、魔法陣、高橋くん、歩きのみのゴーストを描いています。"></canvas></div>
+      <div class="status">
+        <div class="bar" id="saBar"><i id="saBarFill"></i></div>
+        <div id="saText" aria-live="off">準備中</div>
+      </div>
+      <div class="transport" role="group" aria-label="再生コントロール">
+        <div class="trow">
+          <button class="ibtn" id="toStart" type="button" aria-label="先頭へ" title="先頭へ (Home)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2h2v12H3zM14 2v12L6 8z"/></svg></button>
+          <button class="ibtn" id="stepBack" type="button" aria-label="1 手戻る" title="1 手戻る (←)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11 2v12L4 8z"/></svg></button>
+          <button class="btn primary" id="play" type="button" aria-label="再生" title="再生 / 一時停止 (Space)"><svg id="playIcon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2v12l10-6z"/></svg><span id="playLabel">再生</span></button>
+          <button class="ibtn" id="stepFwd" type="button" aria-label="1 手進む" title="1 手進む (→)"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 2v12l7-6z"/></svg></button>
+          <label class="speed"><span>速度</span><input id="speed" type="range" min="0" max="1000" step="1" value="500" aria-label="再生速度 (手/秒)"><output id="speedOut" for="speed">280 手/秒</output></label>
+        </div>
+        <div class="seekwrap" id="seekWrap">
+          <input id="seek" type="range" min="0" max="12000" step="1" value="0" aria-label="手数">
+          <span class="donemark" id="doneMark" hidden>完了</span>
+        </div>
+        <div class="trow">
+          <label class="sw"><input type="checkbox" id="tgGhost" checked><span>ゴースト</span></label>
+          <label class="sw"><input type="checkbox" id="tgTrail" checked><span>軌跡</span></label>
+        </div>
+        <p class="donenote" id="doneNote" role="status"></p>
+      </div>
+      <div class="key" aria-hidden="true">
+        <span><i class="k-player"></i>高橋くん</span>
+        <span><i class="k-ghost"></i>歩きのみ</span>
+        <span><i class="k-start"></i>出発点 s</span>
+        <span><i class="k-dest"></i>目的地</span>
+        <span><i class="k-jump"></i>転移 (p → c → q)</span>
+      </div>
+    </section>
+
+    <aside class="dash" aria-label="計器盤">
+      <section>
+        <div class="cap">このケースのスコア</div>
+        <div class="score-row">
+          <div class="score-num" id="score">—</div>
+          <div class="score-formula" id="scoreFormula">M + T − A + 1</div>
+        </div>
+        <dl class="tri">
+          <div><dt>T (歩きのみ)</dt><dd id="statT">—</dd></div>
+          <div><dt>A (焼きなまし)</dt><dd id="statA">—</dd></div>
+          <div><dt>短縮 T − A</dt><dd><span id="statDiff">—</span><small id="statPct">&nbsp;</small></dd></div>
+        </dl>
+      </section>
+      <section>
+        <div class="cap">再生の位置</div>
+        <dl class="hud" style="margin-top:8px">
+          <div><dt>手数 t / T</dt><dd id="hudT">—</dd></div>
+          <div><dt>到達 V / <span id="hudM">150</span></dt><dd id="hudV">—</dd></div>
+          <div><dt>ゴースト</dt><dd id="hudG">—</dd></div>
+        </dl>
+      </section>
+      <section>
+        <div class="cap">転移と探索</div>
+        <div class="facts" style="margin-top:8px"><span>転移 <b id="statJumps">—</b> 回</span></div>
+        <div class="chips" id="chips"></div>
+        <div class="facts">
+          <span>反復 <b id="statIters">—</b> 回</span>
+          <span>受理率 <b id="statAcc">—</b></span>
+        </div>
+      </section>
+      <section>
+        <div class="charthead">
+          <h2 id="chartTitle">焼きなましの経過</h2>
+          <button class="btn" id="tlBtn" type="button" disabled>タイムラプス</button>
+        </div>
+        <div class="chartwrap" id="chartWrap"><canvas id="chart" role="img" aria-label="焼きなましの経過。横軸は計算時間、縦軸は操作数。"></canvas></div>
+        <div class="readout" id="readout" aria-live="off"></div>
+        <p class="chartcap" id="chartCap">横軸は計算時間 (ms)、縦軸は操作数。帯は各区間での現在解の最小〜最大、太線は best。焼き終えたあとグラフ上をなぞると、その時刻の best を盤に出します。</p>
+        <p class="chartnote" id="chartNote" hidden>貼り付けた出力を再生しています。焼きなましの経過は、元のケースに戻すと見られます。</p>
+      </section>
+    </aside>
+  </main>
+
+  <div class="tools">
+    <details id="pasteBox">
+      <summary>自分の出力を再生</summary>
+      <p class="pastehint">入力ファイルと出力ファイルの中身を貼ります。公式ルールのシミュレータで検証し、正しければその解を盤で再生します。ファイルを欄にドロップしても読み込めます。操作数が T を超える出力や、盤外へ出る出力は、行番号つきで理由を示します。入力欄には今のケースが入っています。</p>
+      <div class="paste-grid">
+        <label><span>入力 (N M K T / s / g_0 … g_149)</span><textarea id="pasteIn" spellcheck="false" placeholder="128 150 3 12760&#10;98 79&#10;…"></textarea></label>
+        <label><span>出力 (魔法陣 K 行 + 操作 1 行 1 つ)</span><textarea id="pasteOut" spellcheck="false" placeholder="10 20&#10;30 40&#10;50 60&#10;D&#10;J 30 40&#10;…"></textarea></label>
+      </div>
+      <div class="paste-actions">
+        <button class="btn primary" id="pasteGo" type="button">検証して再生</button>
+        <button class="btn" id="pasteFill" type="button">今の解を入れる</button>
+        <button class="btn" id="pasteBack" type="button" hidden>焼きなました解に戻る</button>
+        <p class="pastemsg" id="pasteMsg" role="status"></p>
+      </div>
+    </details>
+  </div>
+
+  <section class="explain" aria-labelledby="exH">
+    <h2 id="exH">解法のしくみ</h2>
+    <dl>
+      <div><dt>状態</dt><dd>魔法陣の初期配置 3 点と、150 個の区間ごとの「使う陣 (なし / 3 つのどれか)」「跳ぶ直前の位置」を持ちます。区間 i は、前の目的地 (最初は s) から g_i までの移動です。</dd></div>
+      <div><dt>近傍</dt><dd>次の 3 種類を 1/3 ずつの確率で選びます。陣の初期配置を 1 つ動かす。ある区間で使う陣を変える (なしにもできる)。ある区間の跳ぶ直前の位置を動かす。点の移動は 1/8 の確率で盤上の一様ランダムな点へ、それ以外は縦横に −8〜8 ずらします。</dd></div>
+      <div><dt>評価</dt><dd>操作数を先頭から数え直します (計算量 O(M·K))。区間ごとに、跳ぶ直前の位置まで歩き、1 手で転移し、目的地まで歩きます。転移で使った陣は、跳ぶ直前の位置に移ります。盤外に出る解は捨てます。</dd></div>
+      <div><dt>転移</dt><dd>現在地 (i, j) から陣 (a, b) で跳ぶと <code>(i, j) → (2a − i, 2b − j)</code> に着きます。使った陣は消え、(i, j) に新しい陣が描かれます。</dd></div>
+      <div><dt>温度と受理</dt><dd>温度は <code>T0 · (T1 / T0)^progress</code> で、progress は計算に使った時間の割合です。既定は T0 = 30、T1 = 1。操作数が増えない変更は必ず受け入れ、増える変更は <code>exp(gain / 温度)</code> の確率で受け入れます。</dd></div>
+      <div><dt>出力</dt><dd>得られた状態を、区間ごとに「跳ぶ直前の位置へ歩く、J、目的地へ歩く」と展開します。歩くときは縦を先に、横を後にします。</dd></div>
+    </dl>
+    <p class="foot">C++ の解法を JavaScript に移植して、この画面の中で動かしています。乱数と時計が C++ と別なので、同じ seed でも得られる解は一致しません。ケースは seed から作り、検証は公式ルールを再現した別実装です。</p>
+  </section>
+</div>
+<script id="core">
+(function (root) {
+  'use strict';
+  /* AHC073 core: DOM に触れない純粋ロジック。globalThis.AHC に公開する。
+     状態 (Int32Array): [y0 x0 y1 x1 ... | id depart_y depart_x を M 区間分]
+       id = -1 なら歩くだけ、0..K-1 ならその陣で 1 回転移。 */
+
+  var INF = 1000000000;
+  var OPCH = 'UDLRJ';
+  var DY = [-1, 1, 0, 0];
+  var DX = [0, 0, -1, 1];
+  var INV32 = 2.3283064365386963e-10; // 2^-32
+  var INT = /^-?(0|[1-9][0-9]*)$/;
+
+  function defaultNow() {
+    return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  }
+
+  /* ---------- PRNG: xoshiro128** (seed は splitmix32 で展開) ---------- */
+  function makeRng(seed) {
+    var z = (seed | 0);
+    function sm() {
+      z = (z + 0x9e3779b9) | 0;
+      var t = z ^ (z >>> 16);
+      t = Math.imul(t, 0x21f0aaad);
+      t ^= t >>> 15;
+      t = Math.imul(t, 0x735a2d97);
+      t ^= t >>> 15;
+      return t | 0;
+    }
+    var s0 = sm(), s1 = sm(), s2 = sm(), s3 = sm();
+    if ((s0 | s1 | s2 | s3) === 0) s0 = 1;
+    /* 符号付き int32 を返す (Smi に乗りやすい)。 */
+    function next() {
+      var m = Math.imul(s1, 5);
+      var r = Math.imul((m << 7) | (m >>> 25), 9);
+      var t = s1 << 9;
+      s2 ^= s0; s3 ^= s1; s1 ^= s2; s0 ^= s3; s2 ^= t;
+      s3 = (s3 << 11) | (s3 >>> 21);
+      return r;
+    }
+    return {
+      next: next,
+      u32: function () { return next() >>> 0; },
+      /* [0, n) */
+      int: function (n) { return ((next() >>> 0) * n * INV32) | 0; },
+      /* [0, 1) */
+      dbl: function () { return (next() >>> 0) * INV32; }
+    };
+  }
+
+  /* ---------- 入力 ---------- */
+  function walkLength(inst) {
+    var d = Math.abs(inst.sy - inst.gy[0]) + Math.abs(inst.sx - inst.gx[0]);
+    for (var r = 0; r + 1 < inst.M; r++) {
+      d += Math.abs(inst.gy[r] - inst.gy[r + 1]) + Math.abs(inst.gx[r] - inst.gx[r + 1]);
+    }
+    return d;
+  }
+
+  function makeInstance(N, M, K, T, sy, sx, gy, gx) {
+    return { N: N, M: M, K: K, T: T, sy: sy, sx: sx, gy: gy, gx: gx };
+  }
+
+  /* N² マスから相異なる M+1 マスを順に選ぶ。最初が s、残りが g_0..g_{M-1}。 */
+  function generate(seed, N, M, K) {
+    N = N || 128; M = M || 150; K = K || 3;
+    var rng = makeRng(seed);
+    var used = new Uint8Array(N * N);
+    var ys = new Int32Array(M + 1), xs = new Int32Array(M + 1);
+    for (var i = 0; i <= M; i++) {
+      var c;
+      do { c = rng.int(N * N); } while (used[c]);
+      used[c] = 1;
+      ys[i] = (c / N) | 0;
+      xs[i] = c % N;
+    }
+    var gy = ys.slice(1), gx = xs.slice(1);
+    var inst = makeInstance(N, M, K, 0, ys[0], xs[0], gy, gx);
+    inst.T = walkLength(inst);
+    inst.seed = seed;
+    return inst;
+  }
+
+  function instanceToText(inst) {
+    var out = [inst.N + ' ' + inst.M + ' ' + inst.K + ' ' + inst.T, inst.sy + ' ' + inst.sx];
+    for (var r = 0; r < inst.M; r++) out.push(inst.gy[r] + ' ' + inst.gx[r]);
+    return out.join('\n') + '\n';
+  }
+
+  /* 入力パーサ。トークン単位で読み、エラーには行番号を付ける。 */
+  function parseInput(text) {
+    var lines = String(text).split('\n');
+    var toks = [], tl = [];
+    for (var li = 0; li < lines.length; li++) {
+      var parts = lines[li].trim().split(/\s+/);
+      for (var p = 0; p < parts.length; p++) {
+        if (parts[p] !== '') { toks.push(parts[p]); tl.push(li + 1); }
+      }
+    }
+    var pos = 0;
+    var lastLine = Math.max(1, tl.length ? tl[tl.length - 1] : 1);
+    function fail(line, msg) { return { inst: null, error: { where: 'input', line: line, msg: msg } }; }
+    function readInt(name) {
+      if (pos >= toks.length) return { err: fail(lastLine, name + ' がありません。入力が途中で終わっています') };
+      var s = toks[pos], line = tl[pos];
+      if (!INT.test(s)) return { err: fail(line, name + ' は整数で書きます (「' + s.slice(0, 12) + '」を読みました)') };
+      pos++;
+      return { v: parseInt(s, 10), line: line };
+    }
+    var hn = ['N', 'M', 'K', 'T'], h = [];
+    for (var a = 0; a < 4; a++) {
+      var r0 = readInt(hn[a]);
+      if (r0.err) return r0.err;
+      h.push(r0);
+    }
+    var N = h[0].v, M = h[1].v, K = h[2].v, T = h[3].v;
+    if (N < 1 || N > 1000) return fail(h[0].line, 'N は 1〜1000 で指定します');
+    if (M < 1 || M > 5000) return fail(h[1].line, 'M は 1〜5000 で指定します');
+    if (K < 1 || K > 12) return fail(h[2].line, 'K は 1〜12 で指定します');
+    if (T < 0) return fail(h[3].line, 'T は 0 以上で指定します');
+    var sy, sx;
+    var rr = readInt('s の行座標'); if (rr.err) return rr.err; sy = rr;
+    rr = readInt('s の列座標'); if (rr.err) return rr.err; sx = rr;
+    if (sy.v < 0 || sy.v >= N || sx.v < 0 || sx.v >= N) {
+      return fail(sy.line, 's = (' + sy.v + ', ' + sx.v + ') が盤の範囲 0〜' + (N - 1) + ' の外です');
+    }
+    var gy = new Int32Array(M), gx = new Int32Array(M);
+    for (var r = 0; r < M; r++) {
+      var y = readInt('g_' + r + ' の行座標'); if (y.err) return y.err;
+      var x = readInt('g_' + r + ' の列座標'); if (x.err) return x.err;
+      if (y.v < 0 || y.v >= N || x.v < 0 || x.v >= N) {
+        return fail(y.line, 'g_' + r + ' = (' + y.v + ', ' + x.v + ') が盤の範囲 0〜' + (N - 1) + ' の外です');
+      }
+      gy[r] = y.v; gx[r] = x.v;
+    }
+    if (pos < toks.length) return fail(tl[pos], '余分なデータがあります。目的地は ' + M + ' 個までです');
+    return { inst: makeInstance(N, M, K, T, sy.v, sx.v, gy, gx), error: null };
+  }
+
+  /* ---------- 状態・評価 (main.cpp の evaluate の移植) ---------- */
+  /* 全区間を歩く初期解。陣は一様ランダム。 */
+  function initialState(inst, rng) {
+    var K = inst.K, M = inst.M, N = inst.N;
+    var st = new Int32Array(2 * K + 3 * M);
+    for (var k = 0; k < K; k++) {
+      st[2 * k] = rng.int(N);
+      st[2 * k + 1] = rng.int(N);
+    }
+    for (var i = 0; i < M; i++) {
+      var o = 2 * K + 3 * i;
+      st[o] = -1;
+      st[o + 1] = i === 0 ? inst.sy : inst.gy[i - 1];
+      st[o + 2] = i === 0 ? inst.sx : inst.gx[i - 1];
+    }
+    return st;
+  }
+
+  function evaluate(inst, st) {
+    var N = inst.N, M = inst.M, K = inst.K, gy = inst.gy, gx = inst.gx;
+    var K2 = 2 * K;
+    var circ = new Int32Array(K2);
+    for (var j = 0; j < K2; j++) circ[j] = st[j];
+    var py = inst.sy, px = inst.sx, cost = 0;
+    for (var i = 0; i < M; i++) {
+      var o = K2 + 3 * i;
+      var id = st[o];
+      if (id >= 0) {
+        var cy = circ[2 * id], cx = circ[2 * id + 1];
+        var dy = st[o + 1], dx = st[o + 2];
+        var qy = 2 * cy - dy, qx = 2 * cx - dx;
+        if (dy < 0 || dy >= N || dx < 0 || dx >= N || qy < 0 || qy >= N || qx < 0 || qx >= N) return INF;
+        cost += Math.abs(py - dy) + Math.abs(px - dx) + 1;
+        for (var q = 0; q < K; q++) {
+          if (circ[2 * q] === cy && circ[2 * q + 1] === cx) { circ[2 * q] = dy; circ[2 * q + 1] = dx; break; }
+        }
+        py = qy; px = qx;
+      }
+      cost += Math.abs(py - gy[i]) + Math.abs(px - gx[i]);
+      py = gy[i]; px = gx[i];
+    }
+    return cost;
+  }
+
+  /* ---------- 焼きなまし ---------- */
+  /* opts: seed, budgetMs, T0, T1, chunks (チャート用の分割数), now (時計の注入) */
+  function createAnnealer(inst, opts) {
+    opts = opts || {};
+    var N = inst.N, M = inst.M, K = inst.K, gy = inst.gy, gx = inst.gx, sy = inst.sy, sx = inst.sx;
+    var K2 = 2 * K, LEN = K2 + 3 * M;
+    var budget = opts.budgetMs > 0 ? opts.budgetMs : 3000;
+    var T0 = opts.T0 > 0 ? opts.T0 : 30;
+    var T1 = opts.T1 > 0 ? opts.T1 : 1;
+    var ratio = T1 / T0;
+    var NCH = opts.chunks > 0 ? opts.chunks : 200;
+    var chunkMs = budget / NCH;
+    var now = opts.now || defaultNow;
+    var BATCH = 64;
+
+    var rng = makeRng(opts.seed === undefined ? ((Math.random() * 4294967296) | 0) : opts.seed);
+    var next = rng.next;
+    function rnd(n) { return ((next() >>> 0) * n * INV32) | 0; }
+
+    var cur = initialState(inst, rng);
+    var cand = new Int32Array(LEN);
+    var best = cur.slice();
+    var circ = new Int32Array(K2);
+
+    function evalGeneric(st) {
+      for (var j = 0; j < K2; j++) circ[j] = st[j];
+      var py = sy, px = sx, cost = 0;
+      for (var i = 0; i < M; i++) {
+        var o = K2 + 3 * i;
+        var id = st[o];
+        if (id >= 0) {
+          var cy = circ[2 * id], cx = circ[2 * id + 1];
+          var dy = st[o + 1], dx = st[o + 2];
+          var qy = 2 * cy - dy, qx = 2 * cx - dx;
+          if (dy < 0 || dy >= N || dx < 0 || dx >= N || qy < 0 || qy >= N || qx < 0 || qx >= N) return INF;
+          cost += (py > dy ? py - dy : dy - py) + (px > dx ? px - dx : dx - px) + 1;
+          for (var q = 0; q < K; q++) {
+            if (circ[2 * q] === cy && circ[2 * q + 1] === cx) { circ[2 * q] = dy; circ[2 * q + 1] = dx; break; }
+          }
+          py = qy; px = qx;
+        }
+        var ty = gy[i], tx = gx[i];
+        cost += (py > ty ? py - ty : ty - py) + (px > tx ? px - tx : tx - px);
+        py = ty; px = tx;
+      }
+      return cost;
+    }
+
+    /* K = 3 専用 (陣の座標をローカル変数に置く)。結果は evalGeneric と同じ。 */
+    function eval3(st) {
+      var c0y = st[0], c0x = st[1], c1y = st[2], c1x = st[3], c2y = st[4], c2x = st[5];
+      var py = sy, px = sx, cost = 0;
+      for (var i = 0, o = 6; i < M; i++, o += 3) {
+        var id = st[o];
+        if (id >= 0) {
+          var cy, cx;
+          if (id === 0) { cy = c0y; cx = c0x; } else if (id === 1) { cy = c1y; cx = c1x; } else { cy = c2y; cx = c2x; }
+          var dy = st[o + 1], dx = st[o + 2];
+          var qy = 2 * cy - dy, qx = 2 * cx - dx;
+          if ((dy | dx | qy | qx) < 0 || dy >= N || dx >= N || qy >= N || qx >= N) return INF;
+          cost += (py > dy ? py - dy : dy - py) + (px > dx ? px - dx : dx - px) + 1;
+          if (c0y === cy && c0x === cx) { c0y = dy; c0x = dx; }
+          else if (c1y === cy && c1x === cx) { c1y = dy; c1x = dx; }
+          else if (c2y === cy && c2x === cx) { c2y = dy; c2x = dx; }
+          py = qy; px = qx;
+        }
+        var ty = gy[i], tx = gx[i];
+        cost += (py > ty ? py - ty : ty - py) + (px > tx ? px - tx : tx - px);
+        py = ty; px = tx;
+      }
+      return cost;
+    }
+    var evalState = K === 3 ? eval3 : evalGeneric;
+
+    /* y,x に [-8, 8] を足して clamp、1/8 で一様ランダム */
+    function movePoint(s, o) {
+      if (rnd(8) === 0) {
+        s[o] = rnd(N);
+        s[o + 1] = rnd(N);
+      } else {
+        var y = s[o] + rnd(17) - 8;
+        var x = s[o + 1] + rnd(17) - 8;
+        s[o] = y < 0 ? 0 : (y > N - 1 ? N - 1 : y);
+        s[o + 1] = x < 0 ? 0 : (x > N - 1 ? N - 1 : x);
+      }
+    }
+
+    function mutate(s) {
+      var type = rnd(3);
+      if (type === 0) {
+        movePoint(s, 2 * rnd(K));
+      } else {
+        var o = K2 + 3 * rnd(M);
+        if (type === 1) {
+          s[o] = rnd(K + 1) - 1;
+        } else {
+          if (s[o] < 0) s[o] = rnd(K);
+          movePoint(s, o + 1);
+        }
+      }
+    }
+
+    var curCost = evalState(cur);
+    var bestCost = curCost;
+    var initCost = curCost;
+    var elapsed = 0, iters = 0, accepted = 0, infRejected = 0, improvements = 0;
+    var cMin = curCost, cMax = curCost;
+    var done = false, aborted = false;
+
+    /* チャンク記録 */
+    var chEnd = new Float64Array(NCH + 2);
+    var chMin = new Int32Array(NCH + 2), chMax = new Int32Array(NCH + 2), chBest = new Int32Array(NCH + 2);
+    var chTemp = new Float64Array(NCH + 2);
+    var nch = 0;
+    var snaps = [{ ms: 0, cost: curCost, state: best.slice() }];
+    var lastSnapCost = curCost;
+
+    var an = {
+      inst: inst, budgetMs: budget, T0: T0, T1: T1, chunkMs: chunkMs, NCH: NCH,
+      chEnd: chEnd, chMin: chMin, chMax: chMax, chBest: chBest, chTemp: chTemp,
+      snaps: snaps, initCost: initCost
+    };
+
+    function tempAt(ms) {
+      var p = ms / budget;
+      if (p > 1) p = 1;
+      return T0 * Math.pow(ratio, p);
+    }
+    an.tempAt = tempAt;
+
+    function finalizeChunk(endMs) {
+      if (nch >= NCH + 1) return;
+      chEnd[nch] = endMs;
+      chMin[nch] = cMin; chMax[nch] = cMax; chBest[nch] = bestCost;
+      chTemp[nch] = tempAt(endMs);
+      nch++;
+      cMin = curCost; cMax = curCost;
+      if (bestCost !== lastSnapCost) {
+        snaps.push({ ms: endMs, cost: bestCost, state: best.slice() });
+        lastSnapCost = bestCost;
+      }
+    }
+
+    function sync() {
+      an.cur = cur; an.best = best;
+      an.curCost = curCost; an.bestCost = bestCost;
+      an.elapsed = elapsed; an.iters = iters; an.accepted = accepted;
+      an.infRejected = infRejected; an.improvements = improvements;
+      an.nch = nch; an.done = done; an.aborted = aborted;
+      an.progress = done && !aborted ? 1 : Math.min(1, elapsed / budget);
+      an.temp = tempAt(elapsed);
+    }
+
+    /* sliceMs だけ計算を進める。温度は「計算に使った時間」の進捗で決める。 */
+    function runFor(sliceMs) {
+      if (done) return true;
+      var t0 = now(), last = t0, sliceEnd = t0 + sliceMs;
+      var it = iters, acc = accepted, inf = infRejected, imp = improvements;
+      var cc = curCost, bc = bestCost, cmin = cMin, cmax = cMax;
+      var c = cur, d = cand, tmp;
+      for (;;) {
+        var temp = T0 * Math.pow(ratio, elapsed >= budget ? 1 : elapsed / budget);
+        for (var b = 0; b < BATCH; b++) {
+          d.set(c);
+          mutate(d);
+          var cost = evalState(d);
+          it++;
+          if (cost === INF) { inf++; continue; }
+          var gain = cc - cost;
+          if (gain >= 0 || (next() >>> 0) * INV32 < Math.exp(gain / temp)) {
+            tmp = c; c = d; d = tmp;
+            cc = cost; acc++;
+            if (cc < cmin) cmin = cc;
+            if (cc > cmax) cmax = cc;
+            if (cc < bc) { bc = cc; best.set(c); imp++; }
+          }
+        }
+        var t = now();
+        elapsed += t - last; last = t;
+        /* チャンク境界 */
+        curCost = cc; bestCost = bc; cMin = cmin; cMax = cmax; cur = c; cand = d;
+        while (nch < NCH && elapsed >= (nch + 1) * chunkMs) {
+          finalizeChunk((nch + 1) * chunkMs);
+          cmin = cMin; cmax = cMax;
+        }
+        if (elapsed >= budget) { done = true; break; }
+        if (t >= sliceEnd) break;
+      }
+      iters = it; accepted = acc; infRejected = inf; improvements = imp;
+      if (done) {
+        while (nch < NCH) { finalizeChunk(Math.min(budget, (nch + 1) * chunkMs)); }
+        if (bestCost !== lastSnapCost) { snaps.push({ ms: budget, cost: bestCost, state: best.slice() }); lastSnapCost = bestCost; }
+      }
+      sync();
+      return done;
+    }
+
+    /* 打ち切り: その時点の best を使う */
+    function abort() {
+      if (done) return;
+      done = true; aborted = true;
+      finalizeChunk(Math.max(elapsed, 1e-3));
+      if (bestCost !== lastSnapCost) { snaps.push({ ms: elapsed, cost: bestCost, state: best.slice() }); lastSnapCost = bestCost; }
+      sync();
+    }
+
+    an.runFor = runFor;
+    an.abort = abort;
+    an.evalBest = function () { return evaluate(inst, best); };
+    an.evalState = evalState;
+    sync();
+    return an;
+  }
+
+  /* ---------- 操作列 (main.cpp の output / moveTo の移植) ---------- */
+  function newProgram(K, n) {
+    return {
+      K: K, n: n, init: new Int32Array(2 * K),
+      kind: new Uint8Array(n), a: new Int32Array(n), b: new Int32Array(n), line: new Int32Array(n)
+    };
+  }
+
+  /* 縦 (U/D) を先に全部、次に横 (L/R)。 */
+  function moveTo(prog, st, ny, nx) {
+    var dy = ny - st.y, dx = nx - st.x, i;
+    for (i = 0; i < Math.abs(dy); i++) { prog.kind[st.n++] = dy < 0 ? 0 : 1; }
+    for (i = 0; i < Math.abs(dx); i++) { prog.kind[st.n++] = dx < 0 ? 2 : 3; }
+    st.y = ny; st.x = nx;
+  }
+
+  function expand(inst, state) {
+    var cost = evaluate(inst, state);
+    if (cost >= INF) throw new Error('invalid state');
+    var K = inst.K, M = inst.M, K2 = 2 * K;
+    var prog = newProgram(K, cost);
+    var circles = new Int32Array(K2);
+    for (var j = 0; j < K2; j++) { circles[j] = state[j]; prog.init[j] = state[j]; }
+    var st = { y: inst.sy, x: inst.sx, n: 0 };
+    for (var i = 0; i < M; i++) {
+      var o = K2 + 3 * i;
+      var id = state[o];
+      if (id !== -1) {
+        var py = state[o + 1], px = state[o + 2];
+        moveTo(prog, st, py, px);
+        var cy = circles[2 * id], cx = circles[2 * id + 1];
+        prog.kind[st.n] = 4; prog.a[st.n] = cy; prog.b[st.n] = cx; st.n++;
+        st.y = 2 * cy - py; st.x = 2 * cx - px;
+        for (var q = 0; q < K; q++) {
+          if (circles[2 * q] === cy && circles[2 * q + 1] === cx) { circles[2 * q] = py; circles[2 * q + 1] = px; break; }
+        }
+      }
+      moveTo(prog, st, inst.gy[i], inst.gx[i]);
+    }
+    for (var l = 0; l < prog.n; l++) prog.line[l] = K + 1 + l;
+    return prog;
+  }
+
+  function programToText(prog) {
+    var out = [], K = prog.K, i;
+    for (i = 0; i < K; i++) out.push(prog.init[2 * i] + ' ' + prog.init[2 * i + 1]);
+    for (i = 0; i < prog.n; i++) {
+      var k = prog.kind[i];
+      out.push(k < 4 ? OPCH[k] : 'J ' + prog.a[i] + ' ' + prog.b[i]);
+    }
+    return out.join('\n') + '\n';
+  }
+
+  /* 歩きのみの操作列 (ゴースト用)。陣は使わないので s に置く。 */
+  function walkOnlyProgram(inst) {
+    var T = walkLength(inst);
+    var prog = newProgram(inst.K, T);
+    for (var k = 0; k < inst.K; k++) { prog.init[2 * k] = inst.sy; prog.init[2 * k + 1] = inst.sx; }
+    var st = { y: inst.sy, x: inst.sx, n: 0 };
+    for (var i = 0; i < inst.M; i++) moveTo(prog, st, inst.gy[i], inst.gx[i]);
+    for (var l = 0; l < T; l++) prog.line[l] = inst.K + 1 + l;
+    return prog;
+  }
+
+  /* ---------- 出力のパーサ (行番号つき) ---------- */
+  function parseProgram(text, inst) {
+    var K = inst.K, N = inst.N;
+    var raw = String(text).split('\n');
+    /* 末尾の空行は許す。途中の空行は 1 行ぶんの誤りとして扱う。 */
+    var last = raw.length;
+    while (last > 0 && raw[last - 1].trim() === '') last--;
+    var rows = [];
+    for (var li = 0; li < last; li++) {
+      var s = raw[li].trim();
+      rows.push({ line: li + 1, toks: s === '' ? [] : s.split(/\s+/) });
+    }
+    var prog = newProgram(K, Math.max(0, rows.length - K));
+    var n = 0;
+    function err(line, msg) {
+      prog.n = n;
+      return { prog: prog, error: { where: 'output', line: line, msg: msg } };
+    }
+    var isInt = INT;
+    var rangeMsg = '0〜' + (N - 1);
+    for (var i = 0; i < K; i++) {
+      if (i >= rows.length) {
+        return err(rows.length + 1,
+          '初期配置が ' + K + ' 行ありません (' + rows.length + ' 行で終わっています)。魔法陣の座標 a b を ' + K + ' 行書きます');
+      }
+      var rw = rows[i];
+      if (rw.toks.length === 0) return err(rw.line, '空行です。初期配置は「a b」の形式で ' + K + ' 行書きます');
+      if (rw.toks.length !== 2 || !isInt.test(rw.toks[0]) || !isInt.test(rw.toks[1])) {
+        return err(rw.line, '初期配置は「a b」(整数 2 つ) の形式で書きます');
+      }
+      var a0 = parseInt(rw.toks[0], 10), b0 = parseInt(rw.toks[1], 10);
+      if (a0 < 0 || a0 >= N || b0 < 0 || b0 >= N) {
+        return err(rw.line, '初期配置の座標 (' + a0 + ', ' + b0 + ') が盤の範囲 ' + rangeMsg + ' の外です');
+      }
+      prog.init[2 * i] = a0; prog.init[2 * i + 1] = b0;
+    }
+    for (var r = K; r < rows.length; r++) {
+      var row = rows[r], tk = row.toks, op = tk[0];
+      if (tk.length === 0) return err(row.line, '空行です。操作は 1 行に 1 つ書きます');
+      if (op === 'U' || op === 'D' || op === 'L' || op === 'R') {
+        if (tk.length !== 1) return err(row.line, '歩行 ' + op + ' の後ろに余分な文字があります');
+        prog.kind[n] = OPCH.indexOf(op);
+      } else if (op === 'J') {
+        if (tk.length !== 3) return err(row.line, '転移は「J a b」の形式で書きます (座標が ' + (tk.length - 1) + ' 個です)');
+        if (!isInt.test(tk[1]) || !isInt.test(tk[2])) return err(row.line, '転移の座標は整数で書きます');
+        var a = parseInt(tk[1], 10), b = parseInt(tk[2], 10);
+        if (a < 0 || a >= N || b < 0 || b >= N) {
+          return err(row.line, '転移の座標 (' + a + ', ' + b + ') が盤の範囲 ' + rangeMsg + ' の外です');
+        }
+        prog.kind[n] = 4; prog.a[n] = a; prog.b[n] = b;
+      } else {
+        return err(row.line, '操作「' + tk[0].slice(0, 10) + '」を解釈できません。U / D / L / R / J a b のいずれかを 1 行に 1 つ書きます');
+      }
+      prog.line[n] = row.line;
+      n++;
+    }
+    prog.n = n;
+    return { prog: prog, error: null };
+  }
+
+  /* ---------- 公式ルールのシミュレータ ---------- */
+  /* 結果: ok / error{where,line,msg} / A / V / score / doneAt と、再生用の軌跡
+       py,px: t 手後の位置  vis: t 手後の到達数  slot[t]: t 手目で使った陣 (歩行は -1)
+       circ[t*2K..]: t 手後の陣の配置  use[k]: 陣 k の使用回数 */
+  function simulate(inst, prog) {
+    var N = inst.N, M = inst.M, K = inst.K, T = inst.T, gy = inst.gy, gx = inst.gx;
+    var K2 = 2 * K, n = prog.n;
+    var py = new Int16Array(n + 1), px = new Int16Array(n + 1), vis = new Int16Array(n + 1);
+    var slot = new Int8Array(n + 1).fill(-1);
+    var circ = new Int16Array((n + 1) * K2);
+    var use = new Int32Array(K);
+    var c = new Int32Array(K2);
+    var j, t, y = inst.sy, x = inst.sx, v = 0, jumps = 0, doneAt = -1;
+    for (j = 0; j < K2; j++) { c[j] = prog.init[j]; circ[j] = c[j]; }
+    py[0] = y; px[0] = x; vis[0] = 0;
+    function fail(i, msg) {
+      return { ok: false, error: { where: 'output', line: prog.line[i], msg: msg }, A: i, V: v };
+    }
+    for (var i = 0; i < n; i++) {
+      t = i + 1;
+      if (i >= T) return fail(i, '操作数が T = ' + T + ' を超えています (' + t + ' 手目)。T 手以内で終えます');
+      var kd = prog.kind[i];
+      if (kd < 4) {
+        var ny = y + DY[kd], nx = x + DX[kd];
+        if (ny < 0 || ny >= N || nx < 0 || nx >= N) {
+          return fail(i, '盤外へ歩いています。(' + y + ', ' + x + ') から ' + OPCH[kd] + ' で (' + ny + ', ' + nx + ') に出ます');
+        }
+        y = ny; x = nx;
+      } else {
+        var a = prog.a[i], b = prog.b[i];
+        if (a < 0 || a >= N || b < 0 || b >= N) {
+          return fail(i, '転移の座標 (' + a + ', ' + b + ') が盤の範囲 0〜' + (N - 1) + ' の外です');
+        }
+        var s = -1;
+        for (j = 0; j < K; j++) { if (c[2 * j] === a && c[2 * j + 1] === b) { s = j; break; } }
+        if (s < 0) return fail(i, '(' + a + ', ' + b + ') に魔法陣がありません');
+        var qy = 2 * a - y, qx = 2 * b - x;
+        if (qy < 0 || qy >= N || qx < 0 || qx >= N) {
+          return fail(i, '転移先 (' + qy + ', ' + qx + ') が盤の外です。現在地 (' + y + ', ' + x + ') から陣 (' + a + ', ' + b + ') で跳べない位置です');
+        }
+        c[2 * s] = y; c[2 * s + 1] = x;
+        y = qy; x = qx;
+        slot[t] = s; use[s]++; jumps++;
+      }
+      py[t] = y; px[t] = x;
+      if (v < M && y === gy[v] && x === gx[v]) { v++; if (v === M) doneAt = t; }
+      vis[t] = v;
+      var base = t * K2;
+      for (j = 0; j < K2; j++) circ[base + j] = c[j];
+    }
+    return {
+      ok: true, error: null, A: n, V: v, T: T, M: M, K: K, N: N, jumps: jumps, doneAt: doneAt,
+      score: v === M ? M + T - n + 1 : v + 1,
+      py: py, px: px, vis: vis, slot: slot, circ: circ, use: use, init: prog.init
+    };
+  }
+
+  /* 出力テキストの検証 (パース + シミュレーション)。最初のエラーを行の順に返す。 */
+  function validateText(inst, text) {
+    var pr = parseProgram(text, inst);
+    var sim = simulate(inst, pr.prog);
+    if (!sim.ok) return sim;
+    if (pr.error) return { ok: false, error: pr.error, A: pr.prog.n, V: sim.V };
+    sim.prog = pr.prog;
+    return sim;
+  }
+
+  function formatError(e) {
+    return (e.where === 'input' ? '入力 ' : '出力 ') + e.line + ' 行目: ' + e.msg;
+  }
+
+  /* 状態 → 解 (プログラム + 軌跡) */
+  function solutionFromState(inst, state) {
+    var prog = expand(inst, state);
+    var tr = simulate(inst, prog);
+    return { prog: prog, tr: tr };
+  }
+
+  root.AHC = {
+    INF: INF, OPCH: OPCH,
+    makeRng: makeRng, generate: generate, instanceToText: instanceToText, parseInput: parseInput,
+    walkLength: walkLength, initialState: initialState, evaluate: evaluate,
+    createAnnealer: createAnnealer,
+    expand: expand, programToText: programToText, walkOnlyProgram: walkOnlyProgram,
+    parseProgram: parseProgram, simulate: simulate, validateText: validateText,
+    formatError: formatError, solutionFromState: solutionFromState
+  };
+})(globalThis);
+</script>
+<script id="ui">
+(function () {
+  'use strict';
+  var AHC = globalThis.AHC;
+  var $ = function (id) { return document.getElementById(id); };
+  function fmt(n) { return Math.round(n).toLocaleString('en-US'); }
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+  function lerp(a, b, u) { return a + (b - a) * u; }
+  function easeInOut(u) { return u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2; }
+  function smooth(u) { u = clamp(u, 0, 1); return u * u * (3 - 2 * u); }
+  function easeOutBack(u) { u = clamp(u, 0, 1); var c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(u - 1, 3) + c1 * Math.pow(u - 1, 2); }
+  function setText(el, s) { if (el._t !== s) { el._t = s; el.textContent = s; } }
+
+  var reduceMq = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var reduceMotion = reduceMq.matches;
+  var FONT_MONO = '"JetBrains Mono", ui-monospace, Consolas, monospace';
+  var FONT_BODY = '"Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", sans-serif';
+
+  /* ---------- 色 (CSS 変数から読む) ---------- */
+  var TH = { c: ['#b07d00', '#0d8580', '#bf3373'] };
+  var hexCache = {};
+  function rgb(hex) {
+    var h = hexCache[hex];
+    if (h) return h;
+    var s = hex.replace('#', '');
+    if (s.length === 3) s = s[0] + s[0] + s[1] + s[1] + s[2] + s[2];
+    h = [parseInt(s.slice(0, 2), 16) || 0, parseInt(s.slice(2, 4), 16) || 0, parseInt(s.slice(4, 6), 16) || 0];
+    hexCache[hex] = h;
+    return h;
+  }
+  function rgba(hex, a) { var c = rgb(hex); return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')'; }
+  function mix(h1, h2, u) {
+    var a = rgb(h1), b = rgb(h2);
+    return 'rgb(' + Math.round(lerp(a[0], b[0], u)) + ',' + Math.round(lerp(a[1], b[1], u)) + ',' + Math.round(lerp(a[2], b[2], u)) + ')';
+  }
+  function readTheme() {
+    var cs = getComputedStyle(document.documentElement);
+    function g(n, d) { var v = cs.getPropertyValue(n).trim(); return v || d; }
+    TH.fg = g('--fg', '#17202b'); TH.muted = g('--muted', '#5b6676'); TH.line = g('--line', '#d5dce4');
+    TH.ember = g('--ember', '#c9471a'); TH.calm = g('--calm', '#5d7f95');
+    TH.c = [g('--c0', '#b07d00'), g('--c1', '#0d8580'), g('--c2', '#bf3373')];
+    TH.board = g('--board', '#fbfcfd'); TH.grid = g('--board-grid', '#e2e7ed');
+    TH.dest = g('--dest', '#3b4654'); TH.destDone = g('--dest-done', '#c3cbd4');
+    TH.walk = g('--walk', '#6b7787'); TH.ghost = g('--ghost', '#8893a1'); TH.panel = g('--panel', '#ffffff');
+    TH.glow = g('--glow', '0') === '1';
+    needBoard(); needChart();
+  }
+
+  /* ---------- 状態 ---------- */
+  var S = {
+    seed: 73, budget: 3000, T0: 30, T1: 1,
+    sa: null, paste: null, active: 'sa', phase: 'init',
+    t: 0, f: 0, playing: false, speed: 280, speedTouched: false,
+    holdStatic: false, showGhost: true, showTrail: true,
+    scrub: null, cursorMs: null, tl: null, lastJump: null,
+    dirtyBoard: true, dirtyChart: true, lastTs: 0, lastDraw: 0, lastDash: 0,
+    seeking: false, dragging: false, pasteDirty: false, snapViews: null
+  };
+  function activeRec() { return S.active === 'paste' && S.paste ? S.paste : S.sa; }
+  function needBoard() { S.dirtyBoard = true; }
+  function needChart() { S.dirtyChart = true; }
+  function tEndOf(rec) { return Math.max(rec.inst.T, rec.sol.tr.A, rec.ghost.A); }
+  function annealing() { return S.active === 'sa' && S.phase === 'annealing'; }
+
+  /* ---------- キャンバス ---------- */
+  function makeView(canvas, wrap, heightFn) {
+    var v = { cv: canvas, wrap: wrap, ctx: canvas.getContext('2d'), w: 0, h: 0, dpr: 1 };
+    v.fit = function () {
+      var w = Math.floor(wrap.clientWidth);
+      if (w < 10) return;
+      var h = heightFn ? heightFn(w) : w;
+      var dpr = Math.min(window.devicePixelRatio || 1, 3);
+      if (w === v.w && h === v.h && dpr === v.dpr) return;
+      v.w = w; v.h = h; v.dpr = dpr;
+      canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+      if (heightFn) canvas.style.height = h + 'px';
+      needBoard(); needChart();
+    };
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(v.fit).observe(wrap);
+    window.addEventListener('resize', v.fit);
+    v.fit();
+    return v;
+  }
+  var board = makeView($('board'), $('boardWrap'), null);
+  var chart = makeView($('chart'), $('chartWrap'), function (w) { return Math.round(clamp(w * 0.64, 220, 300)); });
+
+  /* ---------- ケースと焼きなまし ---------- */
+  function ghostOf(inst) { return AHC.simulate(inst, AHC.walkOnlyProgram(inst)); }
+
+  function startCase(seed) {
+    stopTimelapse();
+    clearCursor();
+    S.paste = null; S.active = 'sa';
+    S.seed = seed;
+    var inst = AHC.generate(seed);
+    var an = AHC.createAnnealer(inst, {
+      seed: (Math.random() * 4294967296) | 0, budgetMs: S.budget, T0: S.T0, T1: S.T1, chunks: 200
+    });
+    S.sa = { inst: inst, ghost: ghostOf(inst), an: an, sol: AHC.solutionFromState(inst, an.best), solCost: an.bestCost };
+    S.snapViews = new Map();
+    S.phase = 'annealing';
+    S.t = 0; S.f = 0; S.holdStatic = true; S.lastJump = null;
+    setPlaying(false);
+    if (!S.pasteDirty) $('pasteIn').value = AHC.instanceToText(inst);
+    $('pasteBack').hidden = true;
+    $('chartTitle').textContent = '焼きなましの経過';
+    $('chartWrap').hidden = false; $('chartNote').hidden = true; $('chartCap').hidden = false;
+    $('abort').hidden = false;
+    $('rerun').disabled = true;
+    $('app').dataset.phase = 'annealing';
+    setControls(false);
+    syncTransport();
+    setText($('hudM'), String(inst.M));
+    updateDash(); needBoard(); needChart();
+  }
+
+  function annealStep() {
+    var rec = S.sa, an = rec.an;
+    an.runFor(12);
+    if (an.bestCost !== rec.solCost) {
+      rec.sol = AHC.solutionFromState(rec.inst, an.best);
+      rec.solCost = an.bestCost;
+      needBoard();
+    }
+    needChart();
+    if (ts() - S.lastDash > 90 || an.done) { updateDash(); S.lastDash = ts(); }
+    if (an.done) finishAnneal();
+  }
+  function ts() { return performance.now(); }
+
+  function finishAnneal() {
+    var rec = S.sa, an = rec.an;
+    rec.sol = AHC.solutionFromState(rec.inst, an.best);
+    rec.solCost = an.bestCost;
+    S.phase = 'done';
+    $('abort').hidden = true;
+    $('rerun').disabled = false;
+    $('app').dataset.phase = 'done';
+    S.t = 0; S.f = 0; S.lastJump = null;
+    if (!S.speedTouched) S.speed = clamp(rec.sol.tr.A / 25, 20, 5000);
+    setControls(true);
+    syncTransport();
+    updateDash(); needBoard(); needChart();
+    $('tlBtn').disabled = an.snaps.length < 2;
+    if (reduceMotion) { S.holdStatic = true; setPlaying(false); }
+    else { S.holdStatic = false; setPlaying(true); }
+  }
+
+  function setControls(on) {
+    ['toStart', 'stepBack', 'play', 'stepFwd', 'seek'].forEach(function (id) { $(id).disabled = !on; });
+    if (!on) $('tlBtn').disabled = true;
+  }
+
+  /* ---------- 再生 ---------- */
+  var PLAY_PATH = 'M4 2v12l10-6z';
+  var PAUSE_PATH = 'M3 2h4v12H3zM9 2h4v12H9z';
+  function setPlaying(on) {
+    if (on) {
+      var rec = activeRec();
+      if (S.t >= tEndOf(rec)) { S.t = 0; S.f = 0; }
+      stopTimelapse(); clearCursor();
+      S.holdStatic = false;
+    }
+    S.playing = on;
+    $('playIcon').firstElementChild.setAttribute('d', on ? PAUSE_PATH : PLAY_PATH);
+    setText($('playLabel'), on ? '一時停止' : '再生');
+    $('play').setAttribute('aria-label', on ? '一時停止' : '再生');
+    needBoard();
+  }
+  function stepDur(rec, t) {
+    var tr = rec.sol.tr;
+    if (t < tr.A && tr.slot[t + 1] >= 0) return Math.max(1 / S.speed, Math.min(0.35, 40 / S.speed));
+    return 1 / S.speed;
+  }
+  function advance(dt) {
+    var rec = activeRec(), tEnd = tEndOf(rec), tr = rec.sol.tr;
+    var rem = dt, guard = 0;
+    while (rem > 0 && S.t < tEnd && guard++ < 20000) {
+      var d = stepDur(rec, S.t);
+      var need = (1 - S.f) * d;
+      if (rem >= need) {
+        rem -= need; S.t++; S.f = 0;
+        if (S.t <= tr.A && tr.slot[S.t] >= 0) S.lastJump = { t: S.t, tr: tr, wall: performance.now() };
+      } else { S.f += rem / d; rem = 0; }
+    }
+    if (S.t >= tEnd) { S.t = tEnd; S.f = 0; setPlaying(false); }
+    needBoard();
+  }
+  function seekTo(t) {
+    var rec = activeRec();
+    S.t = clamp(Math.round(t), 0, tEndOf(rec)); S.f = 0; S.holdStatic = false; S.lastJump = null;
+    needBoard();
+  }
+  function syncTransport() {
+    var rec = activeRec(), tEnd = tEndOf(rec), tr = rec.sol.tr;
+    var seek = $('seek');
+    seek.max = String(tEnd);
+    var mark = $('doneMark');
+    if (annealing()) { mark.hidden = true; }
+    else {
+      mark.hidden = false;
+      mark.style.setProperty('--pos', String(clamp(tr.A / tEnd, 0, 1)));
+      mark.textContent = '完了 ' + fmt(tr.A);
+    }
+    $('speed').value = String(Math.round(1000 * Math.log(S.speed / 20) / Math.log(250)));
+    setText($('speedOut'), fmt(S.speed) + ' 手/秒');
+  }
+
+  /* ---------- 盤の描画 ---------- */
+  var jumpCache = new WeakMap();
+  function jumpList(tr) {
+    var l = jumpCache.get(tr);
+    if (!l) {
+      var n = 0, t;
+      for (t = 1; t <= tr.A; t++) if (tr.slot[t] >= 0) n++;
+      l = new Int32Array(n);
+      n = 0;
+      for (t = 1; t <= tr.A; t++) if (tr.slot[t] >= 0) l[n++] = t;
+      jumpCache.set(tr, l);
+    }
+    return l;
+  }
+  function glyph(ctx, x, y, R, col, s, rot, alpha) {
+    if (s <= 0.01) return;
+    var r = R * s, ri = r * 0.74, k, m, a, TAU = Math.PI * 2;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = col; ctx.fillStyle = rgba(col, 0.13);
+    if (TH.glow) { ctx.shadowColor = col; ctx.shadowBlur = 9 * board.dpr; }
+    ctx.lineWidth = 1.7;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(x, y, ri, 0, TAU); ctx.stroke();
+    ctx.beginPath();
+    for (k = 0; k < 2; k++) {
+      for (m = 0; m < 3; m++) {
+        a = rot + k * Math.PI / 3 + m * TAU / 3;
+        if (m === 0) ctx.moveTo(x + ri * Math.cos(a), y + ri * Math.sin(a));
+        else ctx.lineTo(x + ri * Math.cos(a), y + ri * Math.sin(a));
+      }
+      ctx.closePath();
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+  function haloText(ctx, str, x, y, fill) {
+    ctx.lineWidth = 3; ctx.strokeStyle = rgba(TH.board, 0.9); ctx.lineJoin = 'round';
+    ctx.strokeText(str, x, y);
+    ctx.fillStyle = fill; ctx.fillText(str, x, y);
+  }
+
+  function drawBoard(now) {
+    var B = board;
+    if (!B.w || !S.sa) return;
+    var ctx = B.ctx, W = B.w, H = B.h;
+    ctx.setTransform(B.dpr, 0, 0, B.dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    var rec = activeRec(), inst = rec.inst;
+    var N = inst.N, M = inst.M, K = inst.K, K2 = 2 * K;
+    var pad = W < 460 ? 7 : 11;
+    var cell = (W - 2 * pad) / N;
+    function X(j) { return pad + (j + 0.5) * cell; }
+    function Y(i) { return pad + (i + 0.5) * cell; }
+    var side = N * cell;
+
+    /* 盤面とグリッド */
+    ctx.fillStyle = TH.board; ctx.fillRect(pad, pad, side, side);
+    ctx.lineWidth = 1; ctx.strokeStyle = TH.grid;
+    ctx.beginPath();
+    var step = N >= 64 ? 16 : (N >= 24 ? 8 : 4), g;
+    for (g = step; g < N; g += step) {
+      ctx.moveTo(Math.round(pad + g * cell) + 0.5, pad); ctx.lineTo(Math.round(pad + g * cell) + 0.5, pad + side);
+      ctx.moveTo(pad, Math.round(pad + g * cell) + 0.5); ctx.lineTo(pad + side, Math.round(pad + g * cell) + 0.5);
+    }
+    ctx.stroke();
+    ctx.strokeStyle = TH.line; ctx.strokeRect(pad + 0.5, pad + 0.5, side - 1, side - 1);
+    ctx.font = '10px ' + FONT_MONO; ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = TH.muted; ctx.textAlign = 'left';
+    ctx.fillText('(0,0)  i↓ j→', pad + 5, pad + 13);
+    ctx.globalAlpha = 0.85;
+    for (g = step; g < N; g += step) {
+      ctx.textAlign = 'center'; ctx.fillText(String(g), pad + g * cell, pad + side - 4);
+      ctx.textAlign = 'right'; ctx.fillText(String(g), pad + side - 4, pad + g * cell + 3.5);
+    }
+    ctx.globalAlpha = 1; ctx.textAlign = 'left';
+
+    /* 表示する解と時刻 */
+    var scrub = S.scrub;
+    var tr = scrub ? scrub.tr : rec.sol.tr;
+    var statik = !!scrub || annealing() || S.holdStatic;
+    var A = tr.A;
+    var ti = statik ? A : Math.min(S.t, A);
+    var tf = (!statik && ti < A) ? S.f : 0;
+    var isJump = !statik && ti < A && tr.slot[ti + 1] >= 0;
+    var jslot = isJump ? tr.slot[ti + 1] : -1;
+    var K3 = TH.c.length;
+
+    /* 高橋くんの現在位置 */
+    var ppx = 0, ppy = 0, hasPlayer = !statik;
+    var cx0 = 0, cy0 = 0;
+    if (hasPlayer) {
+      var x0 = tr.px[ti], y0 = tr.py[ti];
+      if (ti < A) {
+        var x1 = tr.px[ti + 1], y1 = tr.py[ti + 1];
+        if (isJump) {
+          cx0 = (x0 + x1) / 2; cy0 = (y0 + y1) / 2;
+          var u = easeInOut(tf);
+          if (u < 0.5) { ppx = lerp(x0, cx0, u * 2); ppy = lerp(y0, cy0, u * 2); }
+          else { ppx = lerp(cx0, x1, u * 2 - 1); ppy = lerp(cy0, y1, u * 2 - 1); }
+        } else { ppx = lerp(x0, x1, tf); ppy = lerp(y0, y1, tf); }
+      } else { ppx = x0; ppy = y0; }
+    }
+
+    /* 軌跡 */
+    var trailEnd = statik ? A : ti;
+    if (S.showTrail && trailEnd > 0) {
+      var RECENT = statik ? 0 : 500;
+      var split = Math.max(0, trailEnd - RECENT), t, pen;
+      ctx.lineWidth = 1; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      for (var pass = 0; pass < 2; pass++) {
+        var from = pass === 0 ? 0 : split, to = pass === 0 ? split : trailEnd;
+        if (to <= from) continue;
+        ctx.strokeStyle = rgba(TH.walk, statik ? 0.4 : (pass === 0 ? 0.24 : 0.5));
+        ctx.beginPath(); pen = false;
+        for (t = from + 1; t <= to; t++) {
+          if (tr.slot[t] >= 0) { pen = false; continue; }
+          if (!pen) { ctx.moveTo(X(tr.px[t - 1]), Y(tr.py[t - 1])); pen = true; }
+          ctx.lineTo(X(tr.px[t]), Y(tr.py[t]));
+        }
+        ctx.stroke();
+      }
+      if (hasPlayer && ti < A && !isJump) {
+        ctx.strokeStyle = rgba(TH.walk, 0.5);
+        ctx.beginPath(); ctx.moveTo(X(tr.px[ti]), Y(tr.py[ti])); ctx.lineTo(X(ppx), Y(ppy)); ctx.stroke();
+      }
+      var jl = jumpList(tr);
+      ctx.lineWidth = 1.3; ctx.setLineDash([4, 3]);
+      for (var q = 0; q < jl.length; q++) {
+        var jt = jl[q];
+        if (jt > trailEnd) break;
+        ctx.strokeStyle = rgba(TH.c[tr.slot[jt] % K3], statik ? 0.55 : (jt > split ? 0.95 : 0.42));
+        ctx.beginPath(); ctx.moveTo(X(tr.px[jt - 1]), Y(tr.py[jt - 1])); ctx.lineTo(X(tr.px[jt]), Y(tr.py[jt])); ctx.stroke();
+      }
+      if (isJump) {
+        ctx.strokeStyle = rgba(TH.c[jslot % K3], 0.95);
+        ctx.beginPath(); ctx.moveTo(X(tr.px[ti]), Y(tr.py[ti])); ctx.lineTo(X(ppx), Y(ppy)); ctx.stroke();
+      }
+      ctx.setLineDash([]);
+    }
+
+    /* 魔法陣 */
+    var R = Math.max(7, cell * 2.6);
+    var cfg = tr.circ, base = (statik ? 0 : ti) * K2, k;
+    for (k = 0; k < K; k++) {
+      if (k === jslot) continue;
+      var rot = reduceMotion ? 0.35 + k : now * 0.00032 * (k % 2 ? -1 : 1) + k * 1.1;
+      glyph(ctx, X(cfg[base + 2 * k + 1]), Y(cfg[base + 2 * k]), R, TH.c[k % K3], 1, rot, 1);
+    }
+    if (isJump) {
+      var col = TH.c[jslot % K3];
+      var s1 = 1 - smooth(tf / 0.6);
+      var s2 = easeOutBack((tf - 0.35) / 0.65);
+      var rotJ = reduceMotion ? 0.35 : now * 0.00032 + jslot * 1.1;
+      glyph(ctx, X(cx0), Y(cy0), R, col, s1, rotJ + (1 - s1) * 4, s1 * 0.9 + 0.1);
+      var px0 = tr.px[ti], py0 = tr.py[ti];
+      glyph(ctx, X(px0), Y(py0), R, col, s2, rotJ - (1 - clamp(s2, 0, 1)) * 4, 1);
+      if (tf > 0.35 && tf < 1) {
+        var halo = (tf - 0.35) / 0.65;
+        ctx.save();
+        ctx.strokeStyle = rgba(col, 0.6 * (1 - halo)); ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(X(px0), Y(py0), R * (1 + halo * 0.9), 0, Math.PI * 2); ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    /* 目的地 */
+    var vis = statik ? 0 : tr.vis[ti];
+    var dr = Math.max(1.8, cell * 0.5), r;
+    ctx.fillStyle = TH.destDone; ctx.beginPath();
+    for (r = 0; r < vis; r++) { ctx.moveTo(X(inst.gx[r]) + dr, Y(inst.gy[r])); ctx.arc(X(inst.gx[r]), Y(inst.gy[r]), dr, 0, Math.PI * 2); }
+    ctx.fill();
+    ctx.fillStyle = TH.dest; ctx.beginPath();
+    for (r = vis; r < M; r++) { ctx.moveTo(X(inst.gx[r]) + dr, Y(inst.gy[r])); ctx.arc(X(inst.gx[r]), Y(inst.gy[r]), dr, 0, Math.PI * 2); }
+    ctx.fill();
+    ctx.fillStyle = TH.fg;
+    ctx.fillRect(X(inst.sx) - 3.5, Y(inst.sy) - 3.5, 7, 7);
+    ctx.font = '600 10px ' + FONT_MONO;
+    haloText(ctx, 's', X(inst.sx) + 6, Y(inst.sy) - 5, TH.fg);
+
+    /* 次の目的地 */
+    if (!statik && vis < M) {
+      var pulse = reduceMotion ? 0 : Math.sin(now / 230);
+      var nx = X(inst.gx[vis]), ny = Y(inst.gy[vis]);
+      ctx.strokeStyle = TH.ember; ctx.lineWidth = 1.7;
+      ctx.beginPath(); ctx.arc(nx, ny, 6.5 + pulse * 1.8, 0, Math.PI * 2); ctx.stroke();
+      ctx.font = '600 11px ' + FONT_MONO;
+      var label = '#' + (vis + 1);
+      var lw = ctx.measureText(label).width;
+      var lx = Math.min(nx + 9, W - lw - 3), ly = Math.max(ny - 9, 12);
+      haloText(ctx, label, lx, ly, TH.fg);
+    }
+
+    /* ゴースト (歩きのみ) */
+    if (!statik && S.showGhost) {
+      var gt = rec.ghost, gi = Math.min(S.t, gt.A), gx, gy;
+      if (gi < gt.A) { gx = lerp(gt.px[gi], gt.px[gi + 1], S.f); gy = lerp(gt.py[gi], gt.py[gi + 1], S.f); }
+      else { gx = gt.px[gi]; gy = gt.py[gi]; }
+      ctx.strokeStyle = TH.ghost; ctx.lineWidth = 1.8;
+      ctx.beginPath(); ctx.arc(X(gx), Y(gy), 5.5, 0, Math.PI * 2); ctx.stroke();
+      ctx.font = '500 11px ' + FONT_BODY;
+      var gl = ctx.measureText('歩きのみ').width;
+      var glx = X(gx) + 9, gly = Y(gy) + 15;
+      if (glx + gl > W - 3) glx = X(gx) - 9 - gl;
+      if (gly > H - 4) gly = Y(gy) - 10;
+      haloText(ctx, '歩きのみ', glx, gly, TH.muted);
+    }
+
+    /* 高橋くん: 残像 + 本体 */
+    if (hasPlayer) {
+      var a0 = Math.max(0, ti - 26), n = ti - a0;
+      ctx.lineWidth = 3; ctx.lineCap = 'round';
+      for (var s = a0; s < ti; s++) {
+        ctx.strokeStyle = rgba(TH.ember, 0.5 * (s - a0 + 1) / (n + 1));
+        ctx.beginPath(); ctx.moveTo(X(tr.px[s]), Y(tr.py[s])); ctx.lineTo(X(tr.px[s + 1]), Y(tr.py[s + 1])); ctx.stroke();
+      }
+      if (ti < A) {
+        ctx.strokeStyle = rgba(TH.ember, 0.55);
+        ctx.beginPath(); ctx.moveTo(X(tr.px[ti]), Y(tr.py[ti])); ctx.lineTo(X(ppx), Y(ppy)); ctx.stroke();
+      }
+      /* 着地リング */
+      var ring = null;
+      if (isJump && tf > 0.55) {
+        ring = { x: tr.px[ti + 1], y: tr.py[ti + 1], s: jslot, rho: 0.3 * (tf - 0.55) / 0.45 };
+      } else if (!isJump && ti > 0 && tr.slot[ti] >= 0) {
+        var lj = S.lastJump;
+        var age = (lj && lj.t === ti && lj.tr === tr) ? (performance.now() - lj.wall) / 1000 : 99;
+        ring = { x: tr.px[ti], y: tr.py[ti], s: tr.slot[ti], rho: 0.3 + 0.7 * Math.min(1, age / 0.7) };
+      }
+      if (ring) {
+        var al = Math.pow(1 - ring.rho, 1.3) * 0.95;
+        var rr = cell * (1.4 + 5.2 * ring.rho);
+        if (ring.rho >= 1) { al = S.playing ? 0 : 0.5; rr = cell * 2.4; }
+        if (al > 0.01) {
+          ctx.strokeStyle = rgba(TH.c[ring.s % K3], al); ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(X(ring.x), Y(ring.y), rr, 0, Math.PI * 2); ctx.stroke();
+        }
+      }
+      ctx.save();
+      if (TH.glow) { ctx.shadowColor = TH.ember; ctx.shadowBlur = 14 * B.dpr; }
+      ctx.fillStyle = TH.ember; ctx.strokeStyle = TH.board; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.arc(X(ppx), Y(ppy), W < 460 ? 4.8 : 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  /* ---------- ダッシュボード ---------- */
+  var chipEls = [];
+  function buildChips(K) {
+    var box = $('chips');
+    if (chipEls.length === K) return;
+    box.textContent = '';
+    chipEls = [];
+    for (var k = 0; k < K; k++) {
+      var chip = document.createElement('span');
+      chip.className = 'chip'; chip.style.color = 'var(--c' + (k % 3) + ')';
+      var dot = document.createElement('i');
+      var nm = document.createElement('span'); nm.textContent = '陣 ' + (k + 1);
+      var cnt = document.createElement('b'); cnt.textContent = '—';
+      chip.appendChild(dot); chip.appendChild(nm); chip.appendChild(cnt);
+      box.appendChild(chip);
+      chipEls.push(cnt);
+    }
+  }
+  function updateDash() {
+    var rec = activeRec();
+    if (!rec) return;
+    var tr = rec.sol.tr, inst = rec.inst, T = inst.T, A = tr.A;
+    setText($('score'), fmt(tr.score));
+    setText($('scoreFormula'), tr.V === inst.M
+      ? 'M + T − A + 1 = ' + inst.M + ' + ' + fmt(T) + ' − ' + fmt(A) + ' + 1'
+      : 'V + 1 = ' + tr.V + ' + 1 (全 ' + inst.M + ' か所に届いていません)');
+    setText($('statT'), fmt(T));
+    setText($('statA'), fmt(A));
+    setText($('statDiff'), fmt(T - A));
+    setText($('statPct'), T > 0 ? ((T - A) / T * 100).toFixed(1) + '% 短縮' : '');
+    setText($('statJumps'), fmt(tr.jumps));
+    buildChips(inst.K);
+    for (var k = 0; k < inst.K; k++) setText(chipEls[k], fmt(tr.use[k]) + ' 回');
+    if (S.active === 'sa') {
+      var an = rec.an;
+      setText($('statIters'), fmt(an.iters));
+      setText($('statAcc'), an.iters ? (an.accepted / an.iters * 100).toFixed(1) + '%' : '—');
+    } else {
+      setText($('statIters'), '—'); setText($('statAcc'), '—');
+    }
+    updateStatus();
+  }
+  function updateStatus() {
+    var rec = activeRec();
+    var bar = $('saBar'), fill = $('saBarFill'), txt = $('saText');
+    if (S.active === 'paste') {
+      bar.classList.add('idle');
+      setText(txt, '貼り付けた出力を再生中 · 検証 OK · 操作 ' + fmt(rec.sol.tr.A) + ' 手');
+      return;
+    }
+    var an = rec.an;
+    if (annealing()) {
+      bar.classList.remove('idle');
+      fill.style.width = (an.progress * 100).toFixed(1) + '%';
+      setText(txt, '焼きなまし中 ' + (an.elapsed / 1000).toFixed(2) + ' / ' + (an.budgetMs / 1000).toFixed(1) + ' 秒 · best ' + fmt(an.bestCost) + ' · 温度 ' + an.temp.toFixed(1));
+    } else {
+      bar.classList.add('idle');
+      setText(txt, (an.aborted ? '中断しました (' : '焼きなまし完了 (') + (an.elapsed / 1000).toFixed(2) + ' 秒 · 反復 ' + fmt(an.iters) + ' 回) · seed ' + rec.inst.seed);
+    }
+  }
+  function updateHud() {
+    var rec = activeRec();
+    if (!rec) return;
+    var tr = rec.sol.tr, inst = rec.inst, tEnd = tEndOf(rec);
+    var ti, vis, gv;
+    if (S.scrub) { ti = S.scrub.tr.A; vis = S.scrub.tr.V; gv = null; }
+    else if (annealing() || S.holdStatic) { ti = tr.A; vis = tr.V; gv = null; }
+    else { ti = Math.min(S.t, tr.A); vis = tr.vis[ti]; gv = rec.ghost.vis[Math.min(S.t, rec.ghost.A)]; }
+    var shownT = (S.scrub || annealing() || S.holdStatic) ? ti : S.t;
+    setText($('hudT'), fmt(shownT) + ' / ' + fmt(inst.T));
+    setText($('hudV'), String(vis));
+    setText($('hudG'), gv === null ? '—' : String(gv) + ' / ' + inst.M);
+    var note = $('doneNote');
+    if (!annealing() && !S.scrub && !S.holdStatic && S.t >= tr.A && tr.V === inst.M) {
+      var d = inst.T - tr.A;
+      var html = '全 ' + inst.M + ' か所に到達。歩きのみより <b>' + fmt(d) + '</b> 手少ない。';
+      if (note._h !== html) { note._h = html; note.innerHTML = html; }
+    } else if (note._h !== '') { note._h = ''; note.textContent = ''; }
+    var seek = $('seek');
+    if (!S.seeking && document.activeElement !== seek) { var v = String(S.t); if (seek.value !== v) seek.value = v; }
+    seek.setAttribute('aria-valuetext', '手数 ' + S.t + ' / ' + tEnd);
+  }
+
+  /* ---------- チャート ---------- */
+  var geo = { x0: 0, x1: 1, y0: 0, y1: 1, xmax: 1 };
+  function niceStep(range, target) {
+    var raw = range / target, p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p;
+    return (f < 1.5 ? 1 : f < 3.5 ? 2 : f < 7.5 ? 5 : 10) * p;
+  }
+  function drawChart() {
+    var C = chart;
+    if (!C.w || !S.sa || S.active === 'paste') return;
+    var ctx = C.ctx, W = C.w, H = C.h;
+    ctx.setTransform(C.dpr, 0, 0, C.dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    var rec = S.sa, an = rec.an, T = rec.inst.T, n = an.nch, i;
+    var padL = 46, padR = 12, padT = 12, padB = 54;
+    var x0 = padL, x1 = W - padR, y0 = padT, y1 = H - padB;
+    var xmax = an.aborted ? Math.max(an.elapsed, 1) : an.budgetMs;
+    geo.x0 = x0; geo.x1 = x1; geo.y0 = y0; geo.y1 = y1; geo.xmax = xmax;
+
+    var lo = Math.min(an.bestCost, an.curCost), hi = Math.max(T, an.curCost);
+    for (i = 0; i < n; i++) { if (an.chMin[i] < lo) lo = an.chMin[i]; if (an.chMax[i] > hi) hi = an.chMax[i]; }
+    var span = Math.max(hi - lo, 40), pd = span * 0.06;
+    var yhi = hi + pd, ph = y1 - y0, below = 22;
+    var ylo = lo - (yhi - lo) * below / (ph - below);
+    function Yv(v) { return y1 - (v - ylo) / (yhi - ylo) * (y1 - y0); }
+    function Xm(ms) { return x0 + ms / xmax * (x1 - x0); }
+
+    ctx.font = '10px ' + FONT_MONO; ctx.textBaseline = 'alphabetic';
+    /* y 目盛り */
+    var ys = niceStep(yhi - ylo, 4), v;
+    ctx.lineWidth = 1; ctx.strokeStyle = rgba(TH.line, 0.8); ctx.fillStyle = TH.muted; ctx.textAlign = 'right';
+    for (v = Math.ceil(ylo / ys) * ys; v <= yhi; v += ys) {
+      var yy = Math.round(Yv(v)) + 0.5;
+      ctx.beginPath(); ctx.moveTo(x0, yy); ctx.lineTo(x1, yy); ctx.stroke();
+      ctx.fillText(String(Math.round(v)), x0 - 6, yy + 3.5);
+    }
+    /* x 目盛り */
+    var xs = niceStep(xmax, 5);
+    ctx.textAlign = 'center';
+    for (v = 0; v <= xmax + 1e-6; v += xs) {
+      var xx = Math.round(Xm(v)) + 0.5;
+      ctx.strokeStyle = rgba(TH.line, 0.8);
+      ctx.beginPath(); ctx.moveTo(xx, y1); ctx.lineTo(xx, y1 + 4); ctx.stroke();
+      ctx.fillText(String(Math.round(v)), clamp(xx, x0 + 6, x1 - 8), y1 + 16);
+    }
+    ctx.strokeStyle = TH.line; ctx.beginPath(); ctx.moveTo(x0, y1 + 0.5); ctx.lineTo(x1, y1 + 0.5); ctx.stroke();
+
+    /* 温度の帯 (全体の予定を薄く、計算済みの部分を濃く) */
+    var sy0 = y1 + 22, sh = 7, col;
+    var nowX = x0 + clamp(an.elapsed / xmax, 0, 1) * (x1 - x0);
+    var T0 = an.T0, T1 = an.T1, lg = Math.log(T0 / T1);
+    for (var px = x0; px < x1; px += 2) {
+      var ms = (px - x0) / (x1 - x0) * xmax;
+      var tp = an.tempAt(ms);
+      var uu = Math.abs(lg) < 1e-9 ? 0.5 : clamp(Math.log(tp / T1) / lg, 0, 1);
+      col = mix(TH.calm, TH.ember, uu);
+      ctx.globalAlpha = px <= nowX ? 1 : 0.28;
+      ctx.fillStyle = col; ctx.fillRect(px, sy0, Math.min(2, x1 - px), sh);
+    }
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = TH.muted; ctx.textAlign = 'left'; ctx.font = '11px ' + FONT_BODY;
+    ctx.fillText('温度 ' + String(T0) + ' → ' + String(T1), x0, sy0 + sh + 14);
+
+    /* T の水平破線 */
+    ctx.font = '10px ' + FONT_MONO;
+    var yT = Yv(T);
+    ctx.strokeStyle = TH.muted; ctx.lineWidth = 1.2; ctx.setLineDash([5, 4]);
+    ctx.beginPath(); ctx.moveTo(x0, yT); ctx.lineTo(x1, yT); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = TH.muted; ctx.textAlign = 'right';
+    ctx.font = '11px ' + FONT_BODY;
+    ctx.fillText('T (歩きのみ) ' + fmt(T), x1 - 2, yT + 14);
+
+    /* cur の min〜max の帯 */
+    if (n > 0) {
+      ctx.fillStyle = rgba(TH.ember, 0.3);
+      ctx.beginPath();
+      ctx.moveTo(x0, Yv(an.initCost) - 0.75);
+      for (i = 0; i < n; i++) ctx.lineTo(Xm(an.chEnd[i]), Yv(an.chMax[i]) - 0.75);
+      for (i = n - 1; i >= 0; i--) ctx.lineTo(Xm(an.chEnd[i]), Yv(an.chMin[i]) + 0.75);
+      ctx.lineTo(x0, Yv(an.initCost) + 0.75);
+      ctx.closePath(); ctx.fill();
+
+      /* best */
+      ctx.strokeStyle = TH.fg; ctx.lineWidth = 2.3; ctx.lineJoin = 'round';
+      ctx.beginPath(); ctx.moveTo(x0, Yv(an.initCost));
+      for (i = 0; i < n; i++) ctx.lineTo(Xm(an.chEnd[i]), Yv(an.chBest[i]));
+      ctx.stroke();
+      var ex = Xm(an.chEnd[n - 1]), ey = Yv(an.chBest[n - 1]);
+      ctx.fillStyle = TH.fg; ctx.beginPath(); ctx.arc(ex, ey, 3.2, 0, Math.PI * 2); ctx.fill();
+      ctx.font = '600 11px ' + FONT_MONO; ctx.textAlign = 'right'; ctx.fillStyle = TH.fg;
+      var bl = 'best ' + fmt(an.bestCost);
+      ctx.fillText(bl, clamp(ex + 4, x0 + 70, x1), ey + 17);
+    }
+
+    /* カーソル */
+    if (S.cursorMs !== null) {
+      var cxp = Xm(S.cursorMs);
+      ctx.strokeStyle = TH.ember; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(Math.round(cxp) + 0.5, y0); ctx.lineTo(Math.round(cxp) + 0.5, y1); ctx.stroke();
+      var si = snapIndexAt(S.cursorMs);
+      var sc = an.snaps[si].cost;
+      ctx.fillStyle = TH.ember; ctx.strokeStyle = TH.panel; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cxp, Yv(sc), 4.2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+  }
+
+  /* ---------- スナップショット / スクラブ / タイムラプス ---------- */
+  function snapIndexAt(ms) {
+    var sn = S.sa.an.snaps, lo = 0, hi = sn.length - 1;
+    while (lo < hi) { var mid = (lo + hi + 1) >> 1; if (sn[mid].ms <= ms) lo = mid; else hi = mid - 1; }
+    return lo;
+  }
+  function snapView(idx) {
+    var cache = S.snapViews, v = cache.get(idx);
+    if (!v) {
+      var rec = S.sa;
+      v = AHC.solutionFromState(rec.inst, rec.an.snaps[idx].state);
+      cache.set(idx, v);
+      if (cache.size > 12) cache.delete(cache.keys().next().value);
+    }
+    return v;
+  }
+  function setCursor(ms) {
+    var rec = S.sa, an = rec.an;
+    ms = clamp(ms, 0, geo.xmax);
+    S.cursorMs = ms;
+    var si = snapIndexAt(ms), sn = an.snaps[si];
+    S.scrub = snapView(si);
+    setText($('readout'), fmt(ms) + ' ms 時点の best ' + fmt(sn.cost) + ' · 温度 ' + an.tempAt(ms).toFixed(1));
+    needBoard(); needChart();
+  }
+  function clearCursor() {
+    if (S.cursorMs === null && !S.scrub) return;
+    S.cursorMs = null; S.scrub = null;
+    setText($('readout'), '');
+    needBoard(); needChart();
+  }
+  function canScrub() { return S.active === 'sa' && S.phase === 'done' && !S.tl; }
+  function chartMs(e) {
+    var r = chart.cv.getBoundingClientRect();
+    return (e.clientX - r.left - geo.x0) / (geo.x1 - geo.x0) * geo.xmax;
+  }
+  chart.cv.addEventListener('pointermove', function (e) {
+    if (!canScrub() || S.playing) return;
+    if (e.pointerType !== 'mouse' && !S.dragging) return;
+    setCursor(chartMs(e));
+  });
+  chart.cv.addEventListener('pointerdown', function (e) {
+    if (!canScrub()) return;
+    if (S.playing) setPlaying(false);
+    S.dragging = true;
+    try { chart.cv.setPointerCapture(e.pointerId); } catch (err) { /* 無視 */ }
+    setCursor(chartMs(e));
+  });
+  function endDrag(e) {
+    if (!S.dragging && e.type !== 'pointerleave') return;
+    if (e.type === 'pointerleave' && S.dragging) return;
+    S.dragging = false;
+    if (e.pointerType !== 'mouse' || e.type === 'pointerleave' || e.type === 'pointercancel') clearCursor();
+  }
+  chart.cv.addEventListener('pointerup', endDrag);
+  chart.cv.addEventListener('pointercancel', endDrag);
+  chart.cv.addEventListener('pointerleave', endDrag);
+
+  function startTimelapse() {
+    if (S.active !== 'sa' || S.phase !== 'done') return;
+    var n = S.sa.an.snaps.length;
+    if (n < 2) return;
+    if (S.playing) setPlaying(false);
+    S.tl = { k: 0, n: n };
+    $('tlBtn').textContent = '停止';
+    $('tlBtn').setAttribute('aria-pressed', 'true');
+    tlFrame(0);
+  }
+  function stopTimelapse() {
+    if (!S.tl) return;
+    S.tl = null;
+    $('tlBtn').textContent = 'タイムラプス';
+    $('tlBtn').setAttribute('aria-pressed', 'false');
+    clearCursor();
+  }
+  function tlFrame(dt) {
+    var tl = S.tl;
+    tl.k += dt / 6 * (tl.n - 1);
+    if (tl.k >= tl.n - 1 + 0.4) { stopTimelapse(); return; }
+    var idx = Math.min(tl.n - 1, Math.floor(tl.k));
+    var sn = S.sa.an.snaps[idx];
+    S.cursorMs = sn.ms;
+    S.scrub = snapView(idx);
+    setText($('readout'), fmt(sn.ms) + ' ms 時点の best ' + fmt(sn.cost) + ' · 温度 ' + S.sa.an.tempAt(sn.ms).toFixed(1));
+    needBoard(); needChart();
+  }
+  $('tlBtn').addEventListener('click', function () { if (S.tl) stopTimelapse(); else startTimelapse(); });
+
+  /* ---------- フレームループ ---------- */
+  function frame(now) {
+    requestAnimationFrame(frame);
+    var dt = Math.min(0.1, Math.max(0, (now - S.lastTs) / 1000));
+    S.lastTs = now;
+    if (annealing()) annealStep();
+    if (S.playing) advance(dt);
+    if (S.tl) tlFrame(dt);
+    if (S.dirtyBoard || S.playing || (!reduceMotion && now - S.lastDraw > 40)) {
+      S.dirtyBoard = false; S.lastDraw = now;
+      drawBoard(now);
+    }
+    if (S.dirtyChart) { S.dirtyChart = false; drawChart(); }
+    updateHud();
+  }
+
+  /* ---------- 入力 ---------- */
+  function showCaseMsg(s) { $('caseMsg').textContent = s || ''; }
+  function readParams() {
+    var seed = Number($('seed').value);
+    if (!/^\d+$/.test($('seed').value.trim()) || seed > 4294967295) {
+      showCaseMsg('seed は 0〜4294967295 の整数で入力してください。'); return null;
+    }
+    var t0 = Number($('t0').value), t1 = Number($('t1').value);
+    if (!(t0 > 0) || !(t1 > 0)) { showCaseMsg('T0 と T1 は 0 より大きい数で入力してください。'); return null; }
+    showCaseMsg('');
+    return { seed: seed, T0: t0, T1: t1, budget: Number($('budget').value) };
+  }
+  function runFromForm() {
+    var p = readParams();
+    if (!p) return;
+    S.T0 = p.T0; S.T1 = p.T1; S.budget = p.budget;
+    S.pasteDirty = false;
+    startCase(p.seed);
+  }
+  $('caseForm').addEventListener('submit', function (e) { e.preventDefault(); runFromForm(); });
+  $('newCase').addEventListener('click', function () {
+    $('seed').value = String(Math.floor(Math.random() * 1000000));
+    runFromForm();
+  });
+  $('abort').addEventListener('click', function () {
+    if (!annealing()) return;
+    S.sa.an.abort();
+    finishAnneal();
+  });
+
+  /* ---------- コピー ---------- */
+  var copyTimer = 0;
+  $('copy').addEventListener('click', function () {
+    var rec = activeRec();
+    var text = AHC.programToText(rec.sol.prog);
+    var btn = $('copy');
+    function done() {
+      btn.textContent = 'コピーしました';
+      clearTimeout(copyTimer);
+      copyTimer = setTimeout(function () { btn.textContent = 'この解をコピー'; }, 1800);
+      $('copyBox').hidden = true;
+    }
+    function fallback() {
+      var box = $('copyBox'), ta = $('copyText');
+      box.hidden = false; ta.value = text; ta.focus(); ta.select();
+    }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback);
+      else fallback();
+    } catch (err) { fallback(); }
+  });
+
+  /* ---------- 自分の出力を再生 ---------- */
+  function lineRange(text, line) {
+    var start = 0, i;
+    for (i = 1; i < line; i++) { var nl = text.indexOf('\n', start); if (nl < 0) return null; start = nl + 1; }
+    var end = text.indexOf('\n', start);
+    return [start, end < 0 ? text.length : end];
+  }
+  function pasteMsg(kind, s) {
+    var el = $('pasteMsg');
+    el.className = 'pastemsg ' + (kind || '');
+    el.textContent = s || '';
+  }
+  function selectErrorLine(ta, line) {
+    var r = lineRange(ta.value, line);
+    ta.focus();
+    if (r) {
+      try { ta.setSelectionRange(r[0], r[1]); } catch (err) { /* 無視 */ }
+      var lh = parseFloat(getComputedStyle(ta).lineHeight) || 19;
+      ta.scrollTop = Math.max(0, (line - 3) * lh);
+    }
+  }
+  $('pasteGo').addEventListener('click', function () {
+    var inTa = $('pasteIn'), outTa = $('pasteOut');
+    if (inTa.value.trim() === '') { pasteMsg('err', '入力が空です。入力ファイルの中身を貼るか、ファイルを入力欄にドロップしてください。'); inTa.focus(); return; }
+    var pi = AHC.parseInput(inTa.value);
+    if (pi.error) { pasteMsg('err', AHC.formatError(pi.error)); selectErrorLine(inTa, pi.error.line); return; }
+    if (outTa.value.trim() === '') { pasteMsg('err', '出力が空です。出力ファイルの中身を貼るか、ファイルを出力欄にドロップしてください。'); outTa.focus(); return; }
+    var inst = pi.inst;
+    var res = AHC.validateText(inst, outTa.value);
+    if (!res.ok) { pasteMsg('err', AHC.formatError(res.error)); selectErrorLine(outTa, res.error.line); return; }
+    if (annealing()) { S.sa.an.abort(); finishAnneal(); }
+    stopTimelapse(); clearCursor(); setPlaying(false);
+    S.paste = { inst: inst, ghost: ghostOf(inst), sol: { prog: res.prog, tr: res }, an: null };
+    S.active = 'paste';
+    S.t = 0; S.f = 0; S.lastJump = null; S.holdStatic = false;
+    S.speed = clamp(res.A / 25, 20, 5000);
+    $('chartTitle').textContent = '貼り付けた出力';
+    $('chartWrap').hidden = true; $('chartNote').hidden = false; $('chartCap').hidden = true;
+    setText($('readout'), ''); $('tlBtn').disabled = true;
+    $('pasteBack').hidden = false;
+    setControls(true); $('tlBtn').disabled = true;
+    syncTransport(); updateDash(); needBoard();
+    setText($('hudM'), String(inst.M));
+    pasteMsg('ok', '検証 OK。操作 ' + fmt(res.A) + ' 手、到達 ' + res.V + ' / ' + inst.M + '、スコア ' + fmt(res.score) + '。盤で再生します。');
+    $('app').dataset.phase = 'paste';
+    setPlaying(!reduceMotion);
+    if (reduceMotion) S.holdStatic = true;
+  });
+  $('pasteBack').addEventListener('click', function () {
+    if (S.active !== 'paste') return;
+    S.active = 'sa'; S.paste = null;
+    S.t = 0; S.f = 0; S.lastJump = null; S.holdStatic = reduceMotion;
+    $('chartTitle').textContent = '焼きなましの経過';
+    $('chartWrap').hidden = false; $('chartNote').hidden = true; $('chartCap').hidden = false;
+    $('pasteBack').hidden = true;
+    $('tlBtn').disabled = S.sa.an.snaps.length < 2;
+    $('app').dataset.phase = S.phase;
+    setText($('hudM'), String(S.sa.inst.M));
+    pasteMsg('', '');
+    syncTransport(); updateDash(); needBoard(); needChart();
+    setPlaying(!reduceMotion && S.phase === 'done');
+    chart.fit();
+  });
+  $('pasteFill').addEventListener('click', function () {
+    var rec = S.sa;
+    if (!rec) return;
+    $('pasteIn').value = AHC.instanceToText(rec.inst);
+    $('pasteOut').value = AHC.programToText(S.active === 'sa' ? rec.sol.prog : S.paste.sol.prog);
+    S.pasteDirty = true;
+    pasteMsg('', '入力と出力に今の解を入れました。操作を書き換えて「検証して再生」を押すと、判定を試せます。');
+  });
+  ['pasteIn', 'pasteOut'].forEach(function (id) {
+    var ta = $(id);
+    ta.addEventListener('input', function () { if (id === 'pasteIn') S.pasteDirty = true; });
+    ta.addEventListener('dragover', function (e) { e.preventDefault(); ta.classList.add('drag'); });
+    ta.addEventListener('dragleave', function () { ta.classList.remove('drag'); });
+    ta.addEventListener('drop', function (e) {
+      e.preventDefault(); ta.classList.remove('drag');
+      var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!f) return;
+      var fr = new FileReader();
+      fr.onload = function () { ta.value = String(fr.result); if (id === 'pasteIn') S.pasteDirty = true; pasteMsg('', f.name + ' を読み込みました。'); };
+      fr.onerror = function () { pasteMsg('err', f.name + ' を読み込めませんでした。テキストファイルをドロップしてください。'); };
+      fr.readAsText(f);
+    });
+  });
+
+  /* ---------- 再生コントロール ---------- */
+  $('play').addEventListener('click', function () { setPlaying(!S.playing); });
+  $('toStart').addEventListener('click', function () { setPlaying(false); seekTo(0); });
+  $('stepBack').addEventListener('click', function () { setPlaying(false); seekTo(S.f > 0 ? S.t : S.t - 1); });
+  $('stepFwd').addEventListener('click', function () { setPlaying(false); seekTo(S.t + 1); });
+  $('seek').addEventListener('input', function () { clearCursor(); seekTo(Number($('seek').value)); });
+  $('seek').addEventListener('pointerdown', function () { S.seeking = true; });
+  window.addEventListener('pointerup', function () { S.seeking = false; });
+  $('speed').addEventListener('input', function () {
+    S.speed = 20 * Math.pow(250, Number($('speed').value) / 1000);
+    S.speedTouched = true;
+    setText($('speedOut'), fmt(S.speed) + ' 手/秒');
+  });
+  $('tgGhost').addEventListener('change', function () { S.showGhost = $('tgGhost').checked; needBoard(); });
+  $('tgTrail').addEventListener('change', function () { S.showTrail = $('tgTrail').checked; needBoard(); });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    var el = e.target, tag = el && el.tagName;
+    if (tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'SUMMARY' || (tag === 'INPUT' && el.type !== 'range' && el.type !== 'checkbox')) return;
+    if (annealing() || !$('play') || $('play').disabled) return;
+    if (e.key === ' ' || e.code === 'Space') {
+      if (tag === 'BUTTON' || tag === 'A' || (tag === 'INPUT' && el.type === 'checkbox')) return;
+      e.preventDefault(); setPlaying(!S.playing);
+    } else if (e.key === 'ArrowRight' && tag !== 'INPUT') {
+      e.preventDefault(); setPlaying(false); seekTo(S.t + 1);
+    } else if (e.key === 'ArrowLeft' && tag !== 'INPUT') {
+      e.preventDefault(); setPlaying(false); seekTo(S.f > 0 ? S.t : S.t - 1);
+    } else if (e.key === 'Home' && tag !== 'INPUT') {
+      e.preventDefault(); setPlaying(false); seekTo(0);
+    }
+  });
+
+  /* ---------- テーマと動きの設定 ---------- */
+  var darkMq = window.matchMedia('(prefers-color-scheme: dark)');
+  if (darkMq.addEventListener) darkMq.addEventListener('change', readTheme);
+  else if (darkMq.addListener) darkMq.addListener(readTheme);
+  new MutationObserver(readTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  var onReduce = function () { reduceMotion = reduceMq.matches; needBoard(); };
+  if (reduceMq.addEventListener) reduceMq.addEventListener('change', onReduce);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { needBoard(); needChart(); });
+
+  /* ---------- 起動 ---------- */
+  readTheme();
+  $('seed').value = String(S.seed);
+  startCase(S.seed);
+  requestAnimationFrame(frame);
+})();
+</script>
