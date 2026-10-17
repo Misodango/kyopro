@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AHC パラメータ調整</title>
+<meta name="description" content="~/kyopro/ahc の run.py / tune.py / param() の使い方">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  /* 左に目次、右に本文の 2 段。狭い画面では 1 段。コマンドは全部コピーできる */
+  :root {
+    --bg: #f3f5f7;
+    --panel: #ffffff;
+    --fg: #18212b;
+    --muted: #5a6573;
+    --line: #d8dee5;
+    --code-bg: #e8edf2;
+    --accent: #0c6b73;
+    --accent-soft: #d6eced;
+    --warn: #8a5a00;
+    --warn-soft: #fbeed3;
+    --font-body: "IBM Plex Sans JP", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif;
+    --font-code: "JetBrains Mono", "Cascadia Code", Consolas, "Noto Sans Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #11161c; --panel: #171e26; --fg: #e2e8ee; --muted: #9aa6b4;
+      --line: #2a3440; --code-bg: #1f2832; --accent: #5cc4c0; --accent-soft: #163a3c;
+      --warn: #f0c26b; --warn-soft: #3a2e14; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #11161c; --panel: #171e26; --fg: #e2e8ee; --muted: #9aa6b4;
+    --line: #2a3440; --code-bg: #1f2832; --accent: #5cc4c0; --accent-soft: #163a3c;
+    --warn: #f0c26b; --warn-soft: #3a2e14; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 15px/1.75 var(--font-body);
+    padding-inline: 16px; padding-block: 32px 64px;
+  }
+  .wrap {
+    max-width: 1080px; margin: 0 auto;
+    display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 40px;
+  }
+  nav { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; font-size: 13px; }
+  nav p { margin: 0 0 8px; color: var(--muted); letter-spacing: .08em; font-size: 11px; font-weight: 700; }
+  nav ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  nav a { color: var(--fg); text-decoration: none; display: block; padding: 3px 8px; border-left: 2px solid var(--line); }
+  nav a:hover, nav a:focus-visible { border-left-color: var(--accent); color: var(--accent); outline: none; }
+  main { min-width: 0; display: grid; gap: 48px; }
+  header h1 { font-size: 30px; line-height: 1.3; margin: 0 0 8px; text-wrap: balance; }
+  header p { margin: 0; color: var(--muted); max-width: 65ch; }
+  .path { font-family: var(--font-code); font-size: 13px; color: var(--accent); }
+  section { display: grid; gap: 14px; }
+  h2 { font-size: 20px; margin: 0; padding-bottom: 6px; border-bottom: 1px solid var(--line); text-wrap: balance; }
+  h3 { font-size: 15px; margin: 8px 0 0; }
+  p, li { max-width: 68ch; }
+  p { margin: 0; }
+  ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+  code { font-family: var(--font-code); font-size: .88em; background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+  .cmd { position: relative; background: var(--code-bg); border-radius: 6px; }
+  .cmd pre { margin: 0; padding: 12px 14px; overflow-x: auto; font: 13px/1.6 var(--font-code); }
+  .cmd pre .c { color: var(--muted); }
+  .cmd button {
+    position: absolute; top: 6px; right: 6px; font: 600 11px var(--font-body);
+    background: var(--panel); color: var(--muted); border: 1px solid var(--line);
+    border-radius: 4px; padding: 2px 8px; cursor: pointer;
+  }
+  .cmd button:hover, .cmd button:focus-visible { color: var(--accent); border-color: var(--accent); outline: none; }
+  .steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 18px; counter-reset: s; }
+  .steps > li { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 12px; max-width: none; }
+  .steps > li::before {
+    counter-increment: s; content: counter(s);
+    width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); color: var(--accent);
+    font: 700 13px/26px var(--font-code); text-align: center;
+  }
+  .steps .body { min-width: 0; display: grid; gap: 8px; }
+  .steps .body > b { font-size: 15px; }
+  .tbl { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; color: var(--muted); font-weight: 700; letter-spacing: .04em; }
+  td:first-child { white-space: nowrap; }
+  td .d { color: var(--muted); font-family: var(--font-code); font-size: 12px; }
+  .note { background: var(--warn-soft); color: var(--fg); border-radius: 6px; padding: 12px 14px; display: grid; gap: 4px; }
+  .note b { color: var(--warn); }
+  .params { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .params div { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; }
+  .params h4 { margin: 0 0 4px; font: 600 13px var(--font-code); color: var(--accent); }
+  .params p { font-size: 13px; color: var(--muted); }
+  .params code { font-size: 12px; }
+  footer { color: var(--muted); font-size: 12px; }
+  @media (max-width: 760px) {
+    .wrap { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+    nav { position: static; }
+    nav ol { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+    header h1 { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <nav aria-label="目次">
+    <p>目次</p>
+    <ol>
+      <li><a href="#flow">本番の流れ</a></li>
+      <li><a href="#param">param() を入れる</a></li>
+      <li><a href="#eval">評価関数の重み</a></li>
+      <li><a href="#run">run.py</a></li>
+      <li><a href="#tune">tune.py</a></li>
+      <li><a href="#judge">結果の読み方</a></li>
+      <li><a href="#trouble">困ったとき</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header>
+      <h1>AHC パラメータ調整</h1>
+      <p>焼きなましの温度やビームの評価関数の重みを、多数の seed で回して自動で決めるための道具です。置き場所は <span class="path">~/kyopro/ahc/</span>。コードの値は環境変数で上書きでき、ジャッジ上では既定値が使われます。</p>
+    </header>
+
+    <section id="flow">
+      <h2>本番の流れ</h2>
+      <p>acc で作った <code>a/</code> に公式ツールを展開して <code>tools/</code> にする。コマンドはすべて <code>a/</code> で打つ。</p>
+      <ol class="steps">
+        <li><div class="body">
+          <b>ツールをビルドする</b>
+          <p>インタラクティブなら <code>tester</code>、そうでなければ <code>vis</code> ができる。run.py はどちらがあるかを見て採点方法を変える。</p>
+          <div class="cmd"><pre>cd tools && cargo build -r && cd ..</pre></div>
+        </div></li>
+        <li><div class="body">
+          <b>コンパイルする</b>
+          <p>出力は <code>./a.out</code>。別名にしたときは run.py / tune.py に <code>-c ./名前</code> を付ける。</p>
+          <div class="cmd"><pre>g++ -std=c++20 -O2 -I ~/kyopro/ac-library main.cpp</pre></div>
+        </div></li>
+        <li><div class="body">
+          <b>基準を保存する</b>
+          <p>今のコードの結果を <code>runs/base.json</code> に残す。コードを直すたびに名前を変えて保存しておくと後で比べられる。</p>
+          <div class="cmd"><pre>python3 ~/kyopro/ahc/run.py -s 0-49 --save base</pre></div>
+        </div></li>
+        <li><div class="body">
+          <b>手で 1 つ試して比べる</b>
+          <p><code>K=V</code> は環境変数 <code>P_K</code> として渡る。基準比の平均と勝敗数が出る。</p>
+          <div class="cmd"><pre>python3 ~/kyopro/ahc/run.py -s 0-49 --base base T0=30</pre></div>
+        </div></li>
+        <li><div class="body">
+          <b>自動で探す</b>
+          <p>TL を短く固定して試行回数を稼ぐ。Ctrl-C で止めても、それまでの最良を表示する。</p>
+          <div class="cmd"><pre>python3 ~/kyopro/ahc/tune.py T0=1:1000:log T1=0.01:10:log TL=500 -s 0-29 -n 50</pre></div>
+        </div></li>
+        <li><div class="body">
+          <b>別の seed で確かめる</b>
+          <p>tune.py が最後に出すコマンドをそのまま打つ。seed 100 以降の入力は gen で先に作っておく。元の TL で回すこと。</p>
+          <div class="cmd"><pre><span class="c"># seeds.txt に 100〜199 を 1 行ずつ書いてから</span>
+cd tools && cargo run -r --bin gen seeds.txt && cd ..
+python3 ~/kyopro/ahc/run.py -s 100-199 --save def
+python3 ~/kyopro/ahc/run.py -s 100-199 --base def T0=37.2 T1=0.41</pre></div>
+        </div></li>
+        <li><div class="body">
+          <b>コードの既定値に書き戻す</b>
+          <p>tune.py が出す <code>param("T0", 37.2)</code> の行で、コードの既定値を置き換えてから提出する。ジャッジに環境変数はないので、書き戻さないと効かない。</p>
+        </div></li>
+      </ol>
+    </section>
+
+    <section id="param">
+      <h2>param() を入れる</h2>
+      <p>sa.cpp / beam.cpp / chokudai.cpp には最初から入っている。新しく書いたコードでも、この関数を貼れば同じように使える。</p>
+      <div class="cmd"><pre>double param(const char *name, double def) {
+  const char *v = getenv(("P_" + string(name)).c_str());
+  return v ? atof(v) : def;
+}
+
+const double TL = param("TL", 1900);       <span class="c">// constexpr にはできない</span>
+const double T0 = param("T0", 100), T1 = param("T1", 1);
+const int WIDTH = param("WIDTH", 500);     <span class="c">// int も double 経由で受ける</span></pre></div>
+      <p>手で 1 回だけ試すときは <code>P_T0=50 ./a.out &lt; tools/in/0000.txt</code> のように直接渡してもよい。</p>
+      <h3>テンプレに入っている名前</h3>
+      <div class="params">
+        <div><h4>sa.cpp</h4><p><code>TL</code> 打ち切り (ms)<br><code>T0</code> 開始温度<br><code>T1</code> 終了温度</p></div>
+        <div><h4>beam.cpp</h4><p><code>TL</code> 打ち切り (ms)<br><code>WIDTH</code> ビーム幅<br><code>W1</code> 特徴量 f1 の重み</p></div>
+        <div><h4>chokudai.cpp</h4><p><code>TL</code> 打ち切り (ms)</p></div>
+      </div>
+    </section>
+
+    <section id="eval">
+      <h2>評価関数の重み</h2>
+      <p>評価関数に何を入れるか迷ったら、思いついた特徴量を全部足して重みを tune.py に任せる。効かない特徴量は重みが 0 付近に寄るので、それを見て消せばよい。</p>
+      <div class="cmd"><pre>const double W1 = param("W1", 0), W2 = param("W2", 0), W3 = param("W3", 0);
+
+<span class="c">// 候補を作るところ</span>
+double eval = score + W1 * f1 + W2 * f2 + W3 * f3;
+cand.pb({eval, hash, (int)i, (int)d});</pre></div>
+      <div class="cmd"><pre>python3 ~/kyopro/ahc/tune.py W1=-5:5 W2=-5:5 W3=-5:5 WIDTH=200 TL=800 -s 0-29 -n 60</pre></div>
+      <ul>
+        <li>重みの符号がわからないときは <code>-5:5</code> のように 0 をまたぐ一様の範囲にする。<code>:log</code> は正の値にしか使えない。</li>
+        <li>特徴量の大きさをだいたいそろえておく (score と同じくらいの桁にする) と、範囲を決めやすい。</li>
+        <li>調整中はビーム幅を固定しておく。幅も一緒に動かすと、時間いっぱいまで広げた幅が選ばれて重みの差が見えにくい。</li>
+        <li>終盤だけ効く特徴量は、<code>W1 * f1 * (turn / T)</code> のように進み具合を掛けた項を別に作る。</li>
+      </ul>
+    </section>
+
+    <section id="run">
+      <h2>run.py</h2>
+      <p>全 seed を並列に回して、件数・失敗数・平均・合計・最大時間を出す。</p>
+      <div class="tbl"><table>
+        <thead><tr><th>指定</th><th>意味</th></tr></thead>
+        <tbody>
+          <tr><td><code>K=V</code></td><td>環境変数 <code>P_K=V</code> として渡す。いくつでも並べられる</td></tr>
+          <tr><td><code>-s</code> <span class="d">0-99</span></td><td>seed。<code>0-49</code>、<code>3,7,10-12</code> のように書ける</td></tr>
+          <tr><td><code>-j</code> <span class="d">6</span></td><td>並列数</td></tr>
+          <tr><td><code>-c</code> <span class="d">./a.out</span></td><td>実行するコマンド。<code>-c "python3 main.py"</code> も可</td></tr>
+          <tr><td><code>--save NAME</code></td><td>seed ごとのスコアを <code>runs/NAME.json</code> に保存</td></tr>
+          <tr><td><code>--base NAME</code></td><td><code>runs/NAME.json</code> と比べて relative と win / lose を出す</td></tr>
+          <tr><td><code>--min</code></td><td>スコアが小さいほど良い問題</td></tr>
+          <tr><td><code>-v</code></td><td>seed ごとのスコア・時間・基準との差を全部表示</td></tr>
+        </tbody>
+      </table></div>
+      <p>出力は <code>out/0000.txt</code>、stderr と採点結果は <code>out/0000.err</code> に残る。1 ケース 10 秒を超えると打ち切って失敗にする。</p>
+    </section>
+
+    <section id="tune">
+      <h2>tune.py</h2>
+      <p>最初にコードの既定値で 1 回回して基準にし、seed ごとの基準比の平均 (relative) が一番高い組を探す。毎回「ランダムに 1 点」か「今の最良を少しずらす」のどちらかを試し、終盤ほど細かくずらす。seed の組は全試行で同じ。</p>
+      <div class="tbl"><table>
+        <thead><tr><th>書き方</th><th>探し方</th></tr></thead>
+        <tbody>
+          <tr><td><code>K=lo:hi</code></td><td>一様。符号が変わる重みなど</td></tr>
+          <tr><td><code>K=lo:hi:log</code></td><td>対数で一様。温度や係数など、桁で効く正の値</td></tr>
+          <tr><td><code>K=lo:hi:int</code></td><td>整数。ビーム幅、近傍の大きさなど</td></tr>
+          <tr><td><code>K=V</code></td><td>固定。基準の実行にも同じ値を渡す (<code>TL=500</code> など)</td></tr>
+        </tbody>
+      </table></div>
+      <div class="tbl"><table>
+        <thead><tr><th>オプション</th><th>意味</th></tr></thead>
+        <tbody>
+          <tr><td><code>-n</code> <span class="d">50</span></td><td>試行回数 (基準の 1 回は別)</td></tr>
+          <tr><td><code>-s</code> <span class="d">0-29</span></td><td>seed</td></tr>
+          <tr><td><code>-j</code> <span class="d">6</span> / <code>-c</code> / <code>--min</code></td><td>run.py と同じ</td></tr>
+        </tbody>
+      </table></div>
+      <p>1 試行にかかる時間は「TL × seed 数 ÷ 並列数」くらい。TL=500、30 seed、6 並列なら約 2.5 秒で、50 試行で 2 分ほど。</p>
+      <h3>出力の例</h3>
+      <div class="cmd"><pre>[ 24/50] rel 1.0302 fail 0  T0=87.3 T1=8.19
+[ 25/50] rel 1.0411 fail 0  T0=41.6 T1=0.52  *best*
+...
+============================================================
+best rel 1.0411 (base 比)
+別の seed でも確認する (seed 100-199 の基準は 1 回だけ保存すればよい):
+  python3 ~/kyopro/ahc/run.py -s 100-199 --save def
+  python3 ~/kyopro/ahc/run.py -s 100-199 --base def T0=41.6 T1=0.52
+コードの既定値に書き戻す:
+  param("T0", 41.6)
+  param("T1", 0.52)</pre></div>
+      <p>全試行は <code>runs/tune.tsv</code> に追記される (relative、失敗数、パラメータ)。<code>sort -rn runs/tune.tsv | head</code> で上位を見られる。</p>
+    </section>
+
+    <section id="judge">
+      <h2>結果の読み方</h2>
+      <ul>
+        <li><b>relative</b> は seed ごとの「スコア ÷ 基準」の平均。1.02 なら平均 2% 良い。AHC の相対評価に近いので、合計より信用できる。失敗した seed は 0 として数える。</li>
+        <li><b>win / lose</b> は基準より良かった seed と悪かった seed の数。relative が上がっていても lose が多いときは、一部の seed で大勝ちしているだけのことがある。</li>
+        <li>同じ seed で選び続けると、その seed に合わせ込んだ値になる。relative 1.01 以下の差は、別の seed で確かめるまで信用しない。</li>
+        <li>時間で打ち切る解法は実行ごとにスコアが揺れる。同じ設定を 2 回回して、揺れの幅を一度見ておく。</li>
+      </ul>
+      <div class="note">
+        <b>並列数と TL</b>
+        <p><code>-j</code> を増やしすぎると 1 ケースあたりの計算量が減ってスコアが下がる (12 スレッドでも物理コアは 6 程度)。比べる実行どうしは同じ <code>-j</code> にそろえる。温度の最適値は TL によって少し変わるので、短い TL で探した値は最後に元の TL で確かめる。</p>
+      </div>
+    </section>
+
+    <section id="trouble">
+      <h2>困ったとき</h2>
+      <div class="tbl"><table>
+        <thead><tr><th>症状</th><th>見るところ</th></tr></thead>
+        <tbody>
+          <tr><td>FAIL が出る</td><td><code>out/XXXX.err</code> を開く。assert 落ち、出力形式の誤り、10 秒超えのどれか。<code>Score = </code> が見つからなくても FAIL になる</td></tr>
+          <tr><td><code>tools/in/0100.txt がない</code></td><td>その seed の入力を gen で作っていない。<code>seeds.txt</code> を書いて <code>cargo run -r --bin gen seeds.txt</code></td></tr>
+          <tr><td>スコアが全部同じ</td><td>param() の名前と <code>K=V</code> の綴りが合っているか。<code>P_</code> は付けずに書く</td></tr>
+          <tr><td>小さいほど良い問題</td><td>run.py と tune.py の両方に <code>--min</code> を付ける</td></tr>
+          <tr><td>「既定値より良いものは見つからなかった」</td><td>既定値がすでに良いか、範囲が狭い・ずれている。範囲を広げるか、効いていない値を外す</td></tr>
+          <tr><td>tester と vis を取り違える</td><td><code>tools/target/release/tester</code> があると必ず tester を使う。非インタラクティブの問題でできていたら消す</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <footer>~/kyopro/ahc/run.py · tune.py · README.md</footer>
+  </main>
+</div>
+
+<script>
+  document.querySelectorAll(".cmd").forEach(function (box) {
+    var pre = box.querySelector("pre");
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = "コピー";
+    btn.addEventListener("click", function () {
+      var text = pre.innerText.split("\n").filter(function (l) { return !/^\s*(#|\/\/)/.test(l); }).join("\n");
+      var done = function () { btn.textContent = "コピーした"; setTimeout(function () { btn.textContent = "コピー"; }, 1200); };
+      var fallback = function () {
+        var r = document.createRange(); r.selectNodeContents(pre);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        btn.textContent = "選択した";
+      };
+      try {
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } catch (e) { fallback(); }
+    });
+    box.appendChild(btn);
+  });
+</script>
+</body>
+</html>
