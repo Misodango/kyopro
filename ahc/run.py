@@ -78,7 +78,7 @@ def evaluate(params, seeds, cmd, jobs, timeout=10):
     """全 seed を並列に回して {seed: (score, 秒)} を返す"""
     for s in seeds:
         if not os.path.exists(os.path.join("tools", "in", "%04d.txt" % s)):
-            sys.exit("tools/in/%04d.txt がない。seeds.txt を作って cargo run -r --bin gen seeds.txt" % s)
+            sys.exit("tools/in/%04d.txt がない。tools で seq 0 199 > seeds.txt && cargo run -r --bin gen seeds.txt (100-199 だけ書くと 0000 から上書きされる)" % s)
     os.makedirs("out", exist_ok=True)
     with concurrent.futures.ThreadPoolExecutor(jobs) as ex:
         fs = {s: ex.submit(run_one, s, params, cmd, timeout) for s in seeds}

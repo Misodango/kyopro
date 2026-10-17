@@ -114,6 +114,7 @@
       <li><a href="#tune">tune.py</a></li>
       <li><a href="#judge">結果の読み方</a></li>
       <li><a href="#trouble">困ったとき</a></li>
+      <li><a href="#dry">AHC006 で試した記録</a></li>
     </ol>
   </nav>
 
@@ -154,9 +155,8 @@
         </div></li>
         <li><div class="body">
           <b>別の seed で確かめる</b>
-          <p>tune.py が最後に出すコマンドをそのまま打つ。seed 100 以降の入力は gen で先に作っておく。元の TL で回すこと。</p>
-          <div class="cmd"><pre><span class="c"># seeds.txt に 100〜199 を 1 行ずつ書いてから</span>
-cd tools && cargo run -r --bin gen seeds.txt && cd ..
+          <p>tune.py が最後に出すコマンドをそのまま打つ。元の TL で回すこと。seed 100 以降の入力は gen で先に作る。gen は seed ではなく <code>seeds.txt</code> の行番号でファイルに名前を付けるので、100〜199 だけを書くと <code>in/0000〜0099</code> が上書きされる。0〜199 を全部書けば、0〜99 は元と同じ入力になり 0100〜0199 が増える。</p>
+          <div class="cmd"><pre>cd tools && seq 0 199 > seeds.txt && cargo run -r --bin gen seeds.txt && cd ..
 python3 ~/kyopro/ahc/run.py -s 100-199 --save def
 python3 ~/kyopro/ahc/run.py -s 100-199 --base def T0=37.2 T1=0.41</pre></div>
         </div></li>
@@ -244,18 +244,21 @@ cand.pb({eval, hash, (int)i, (int)d});</pre></div>
         </tbody>
       </table></div>
       <p>1 試行にかかる時間は「TL × seed 数 ÷ 並列数」くらい。TL=500、30 seed、6 並列なら約 2.5 秒で、50 試行で 2 分ほど。</p>
-      <h3>出力の例</h3>
-      <div class="cmd"><pre>[ 24/50] rel 1.0302 fail 0  T0=87.3 T1=8.19
-[ 25/50] rel 1.0411 fail 0  T0=41.6 T1=0.52  *best*
-...
+      <h3>出力の例 (AHC006 で実際に回したもの)</h3>
+      <div class="cmd"><pre>[ 37/40] rel 1.0819 fail 0  T0=54.1111 T1=4.54781 SWAP=0.8 POOL=217
+[ 38/40] rel 1.0650 fail 0  T0=71.4324 T1=6.42136 SWAP=0.8 POOL=262
+[ 39/40] rel 1.0775 fail 0  T0=121.35 T1=6.42136 SWAP=0.8 POOL=217
+[ 40/40] rel 1.0827 fail 0  T0=71.4324 T1=6.69635 SWAP=0.8 POOL=210  *best*
 ============================================================
-best rel 1.0411 (base 比)
+best rel 1.0827 (base 比)
 別の seed でも確認する (seed 100-199 の基準は 1 回だけ保存すればよい):
   python3 ~/kyopro/ahc/run.py -s 100-199 --save def
-  python3 ~/kyopro/ahc/run.py -s 100-199 --base def T0=41.6 T1=0.52
+  python3 ~/kyopro/ahc/run.py -s 100-199 --base def T0=71.4324 T1=6.69635 SWAP=0.8 POOL=210
 コードの既定値に書き戻す:
-  param("T0", 41.6)
-  param("T1", 0.52)</pre></div>
+  param("T0", 71.4324)
+  param("T1", 6.69635)
+  param("SWAP", 0.8)
+  param("POOL", 210)</pre></div>
       <p>全試行は <code>runs/tune.tsv</code> に追記される (relative、失敗数、パラメータ)。<code>sort -rn runs/tune.tsv | head</code> で上位を見られる。</p>
     </section>
 
@@ -279,13 +282,34 @@ best rel 1.0411 (base 比)
         <thead><tr><th>症状</th><th>見るところ</th></tr></thead>
         <tbody>
           <tr><td>FAIL が出る</td><td><code>out/XXXX.err</code> を開く。assert 落ち、出力形式の誤り、10 秒超えのどれか。<code>Score = </code> が見つからなくても FAIL になる</td></tr>
-          <tr><td><code>tools/in/0100.txt がない</code></td><td>その seed の入力を gen で作っていない。<code>seeds.txt</code> を書いて <code>cargo run -r --bin gen seeds.txt</code></td></tr>
+          <tr><td><code>tools/in/0100.txt がない</code></td><td>その seed の入力を作っていない。tools で <code>seq 0 199 &gt; seeds.txt</code> のあと <code>cargo run -r --bin gen seeds.txt</code>。100〜199 だけを書くと 0000 から上書きされる</td></tr>
           <tr><td>スコアが全部同じ</td><td>param() の名前と <code>K=V</code> の綴りが合っているか。<code>P_</code> は付けずに書く</td></tr>
           <tr><td>小さいほど良い問題</td><td>run.py と tune.py の両方に <code>--min</code> を付ける</td></tr>
           <tr><td>「既定値より良いものは見つからなかった」</td><td>既定値がすでに良いか、範囲が狭い・ずれている。範囲を広げるか、効いていない値を外す</td></tr>
           <tr><td>tester と vis を取り違える</td><td><code>tools/target/release/tester</code> があると必ず tester を使う。非インタラクティブの問題でできていたら消す</td></tr>
         </tbody>
       </table></div>
+    </section>
+
+    <section id="dry">
+      <h2>AHC006 で試した記録</h2>
+      <p>2026-10-17 に <span class="path">~/kyopro/dry/ahc006/a</span> で一通り回した (提出なし)。解法は sa.cpp を元にした焼きなましで、近傍は「1 点を別の位置へ移す」と「選んだ注文を中心に近い候補と入れ替える」の 2 つ。</p>
+      <div class="tbl"><table>
+        <thead><tr><th>手順</th><th>結果</th></tr></thead>
+        <tbody>
+          <tr><td>基準 (T0=100 T1=1 SWAP=0.3 POOL=300)</td><td>seed 0-49 平均 17980</td></tr>
+          <tr><td>手で T0=30</td><td>relative 0.981、20 勝 30 敗。悪化</td></tr>
+          <tr><td>tune.py 40 試行 (TL=500、seed 0-29)</td><td>約 2 分。relative 1.083</td></tr>
+          <tr><td>別の seed 100-199、元の TL</td><td>relative 1.035、73 勝 26 敗</td></tr>
+          <tr><td>既定値に書き戻して再実行</td><td>relative 1.042、76 勝 24 敗</td></tr>
+        </tbody>
+      </table></div>
+      <ul>
+        <li>tune 中の +8.3% は別の seed では +3.5% 前後に縮んだ。tune の数字は割り引いて読み、必ず別の seed で確かめる。</li>
+        <li>SWAP が範囲の上限 0.8 に張り付いた。上限や下限に張り付いた値は範囲を広げて回し直す。</li>
+        <li>ツールの gen は行番号でファイル名を付ける (上の「別の seed で確かめる」を参照)。</li>
+        <li><code>acc new</code> は対話で問題を選ばせるので、端末以外から打つときは <code>acc new ahcXXX --choice all</code>。</li>
+      </ul>
     </section>
 
     <footer>~/kyopro/ahc/run.py · tune.py · README.md</footer>
