@@ -2,7 +2,13 @@
 // 例題は beam.cpp と同じグリッドの得点集め。「問題ごと」の所を書き換える。
 // 深さごとに優先度付きキューを持ち、時間いっぱい
 // 「各深さで上位 WIDTH 個を取り出して展開し、次の深さに積む」を繰り返す。
-constexpr double TL = 1900; // ms
+// 環境変数 P_<name> があればその値、なければ def を返す (ジャッジ上は常に def)
+double param(const char *name, double def) {
+  const char *v = getenv(("P_" + string(name)).c_str());
+  return v ? atof(v) : def;
+}
+
+const double TL = param("TL", 1900); // ms
 
 struct Timer {
   chrono::steady_clock::time_point st = chrono::steady_clock::now();

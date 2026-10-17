@@ -9,12 +9,39 @@ AHC 用の貼り付けテンプレート。acc で作った main.cpp の `// cla
 | `beam.cpp` | ビームサーチ。例題はグリッドの得点集め。候補は (評価値, hash, 親, 行動) だけで作り、残ったものだけ状態を作る。hash で重複除去 |
 | `chokudai.cpp` | chokudai サーチ。例題は beam.cpp と同じ。深さごとの priority_queue |
 | `check.sh` | acc テンプレ + 各ファイルを結合してビルド・実行する (サニタイザ込み) |
+| `run.py` | 全 seed を並列に実行して平均・失敗数・最大時間を出す。`--save` / `--base` で seed ごとの勝敗を比べる |
+| `tune.py` | `param(...)` の値を自動で探す (ランダム + 最良の近くを探す)。依存なし |
 
 ```bash
 bash ahc/check.sh
 ```
 
+どのファイルにも `param(name, 既定値)` が入っていて、環境変数 `P_<name>` があればその値を使う (ジャッジには無いので既定値になる)。
+今入っているのは sa.cpp の `TL` `T0` `T1`、beam.cpp の `TL` `W1` `WIDTH`、chokudai.cpp の `TL`。
+
 どのファイルにも `Timer` (`timer.ms()`) と `Rng` (`nextInt(n)`, `nextInt(l, r)`, `nextDouble()`) が入っている。
+
+## パラメータ調整の手順
+
+コンテストのディレクトリ (acc で作った `a/`) に公式ツールを `tools/` として展開してから:
+
+```bash
+cd tools && cargo build -r && cd ..          # tester (インタラクティブ) か vis ができる
+g++ -std=c++20 -O2 -I ~/kyopro/ac-library main.cpp   # ./a.out
+python3 ~/kyopro/ahc/run.py -s 0-49 --save base      # 基準を保存
+python3 ~/kyopro/ahc/run.py -s 0-49 --base base T0=30   # 比べる (relative, win/lose)
+python3 ~/kyopro/ahc/tune.py T0=1:1000:log T1=0.01:10:log TL=500 -s 0-29 -n 50
+```
+
+- `K=lo:hi` は一様、`K=lo:hi:log` は対数 (温度・係数など正の値)、`K=lo:hi:int` は整数、`K=V` は固定。
+- tune.py は最初にコードの既定値で回して基準にし、seed ごとの基準比の平均 (relative) が最大のものを探す。Ctrl-C で止めても最良を表示する。結果は `runs/tune.tsv` に追記。
+- 最小化の問題は run.py / tune.py に `--min` を付ける。
+- 調整中は `TL=500` などで 1 ケースを短くすると試行回数を稼げる。ただし温度の最適値は TL で少し変わるので、最後は元の TL で run.py を回して確かめる。
+- `-j` は 6 前後 (既定)。時間で打ち切る解法は並列を増やしすぎると 1 ケースあたりの計算量が減ってぶれる。
+- 同じ seed の組で選び続けると、その seed に合わせ込んだ値になりやすい。見つけた値は別の seed (`-s 100-199`) でも勝ち越すか確かめる (seed 100 以降は `cargo run -r --bin gen seeds.txt` で作る)。
+- ビームの評価関数で迷ったら、特徴量を `W1 * f1 + W2 * f2 + ...` と足して重みを tune.py に任せる。効かない特徴量は重みが 0 付近に寄る。
+- 新しい問題のコードでも、調整したい値を `const double X = param("X", 既定値);` と書けば同じように使える。
+- 出力と stderr は `out/XXXX.txt` と `out/XXXX.err` に残る。失敗した seed は FAIL と表示される。
 
 ## 注意
 

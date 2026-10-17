@@ -1,7 +1,14 @@
 // 焼きなまし (acc の main.cpp の `// clang-format on` より下に貼る)
 // 例題: ランダムな点の TSP を 2-opt で解く。「問題ごと」の所を書き換える。
 // 最大化前提。最小化なら score と delta の符号を反転する (例: score = -巡回長)。
-constexpr double TL = 1900; // ms。入出力の時間を見込んで TL より少し短く
+// 環境変数 P_<name> があればその値、なければ def を返す (ジャッジ上は常に def)
+// 例: P_T0=50 ./a.out。run.py / tune.py はこれで値を変えて回す
+double param(const char *name, double def) {
+  const char *v = getenv(("P_" + string(name)).c_str());
+  return v ? atof(v) : def;
+}
+
+const double TL = param("TL", 1900); // ms。入出力の時間を見込んで TL より少し短く
 
 struct Timer {
   chrono::steady_clock::time_point st = chrono::steady_clock::now();
@@ -63,7 +70,8 @@ State initState() {
 // ---- 焼きなまし ----
 State solve() {
   State cur = initState(), best = cur;
-  const double T0 = 100, T1 = 1; // 開始/終了温度。典型的な delta の大きさで決める
+  // 開始/終了温度。典型的な delta の大きさで決める。tune.py で調整できる
+  const double T0 = param("T0", 100), T1 = param("T1", 1);
   const double start = timer.ms();
   double T = T0;
   ll iter = 0, accepted = 0;

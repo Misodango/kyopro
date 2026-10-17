@@ -2,7 +2,14 @@
 // 例題: N x N グリッドの (0, 0) から T 手で上下左右に動き、
 //       初めて踏んだマスの得点を集める。「問題ごと」の所を書き換える。
 // 候補は (評価値, hash, 親, 行動) だけで作り、残ったものだけ状態を作る。
-constexpr double TL = 1900; // ms
+// 環境変数 P_<name> があればその値、なければ def を返す (ジャッジ上は常に def)
+// 例: P_T0=50 ./a.out。run.py / tune.py はこれで値を変えて回す
+double param(const char *name, double def) {
+  const char *v = getenv(("P_" + string(name)).c_str());
+  return v ? atof(v) : def;
+}
+
+const double TL = param("TL", 1900); // ms
 
 struct Timer {
   chrono::steady_clock::time_point st = chrono::steady_clock::now();
@@ -27,6 +34,10 @@ struct Rng {
 
 Timer timer;
 Rng rng;
+
+// 評価値の重み。eval = score + W1 * f1 + ... の形にして tune.py で決める
+const double W1 = param("W1", 0);
+const int WIDTH = param("WIDTH", 500);
 
 // ---- 入力 (問題ごと) ----
 constexpr int N = 20, T = 100;
@@ -76,7 +87,7 @@ void applyAction(State &s, int d) {
 
 // ---- ビームサーチ ----
 struct Cand {
-  ll eval; // ビームで比べる値 (大きいほど良い)
+  double eval; // ビームで比べる値 (大きいほど良い)
   ull hash;
   int parent; // cur での添字
   int act;
@@ -104,11 +115,19 @@ vi beamSearch(int width) {
         int np = nextPos(s, d);
         if (np < 0)
           continue;
-        ll eval = s.score;
+        ll score = s.score;
         ull hash = s.hash ^ zobPos[s.pos] ^ zobPos[np];
         if (!s.vis[np])
-          eval += cell[np], hash ^= zobVis[np];
-        cand.pb({eval, hash, (int)i, (int)d});
+          score += cell[np], hash ^= zobVis[np];
+        // 特徴量 f1 (例): 移動先の隣にある未訪問マスの得点の合計
+        double f1 = 0;
+        rep(e, 4) {
+          int x = np / N + dx[e], y = np % N + dy[e];
+          if (0 <= x && x < N && 0 <= y && y < N && !s.vis[x * N + y] &&
+              x * N + y != np)
+            f1 += cell[x * N + y];
+        }
+        cand.pb({score + W1 * f1, hash, (int)i, (int)d});
       }
     }
     if (cand.empty())
@@ -153,11 +172,11 @@ int main() {
   cin.tie(0)->sync_with_stdio(0);
   input();
   ll greedy = replay(beamSearch(1)); // width = 1 は貪欲
-  vi acts = beamSearch(500);
+  vi acts = beamSearch(WIDTH);
   ll score = replay(acts);
   cerr << "greedy=" << greedy << " beam=" << score << " time=" << timer.ms()
        << "ms" << endl;
-  assert((int)acts.size() == T && score >= greedy);
+  assert((int)acts.size() == T); // 重みを入れると greedy に負けることもある
   for (int d : acts)
     cout << "RDLU"[d];
   cout << '\n';
