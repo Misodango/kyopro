@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """パラメータの自動調整。コンテストのディレクトリで動かす (run.py と同じ前提)。
+出典: https://github.com/Misodango/kyopro/blob/main/ahc/tune.py
 
     python3 ~/kyopro/ahc/tune.py T0=1:1000:log T1=0.01:10:log -s 0-29 -n 60
     python3 ~/kyopro/ahc/tune.py W1=-2:2 WIDTH=100:2000:int TL=500 -n 40

@@ -1,3 +1,4 @@
+// 出典: https://github.com/Misodango/kyopro/blob/main/ahc/sa.cpp
 // 焼きなまし (acc の main.cpp の `// clang-format on` より下に貼る)
 // 例題: ランダムな点の TSP を 2-opt で解く。「問題ごと」の所を書き換える。
 // 最大化前提。最小化なら score と delta の符号を反転する (例: score = -巡回長)。

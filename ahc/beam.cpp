@@ -1,3 +1,4 @@
+// 出典: https://github.com/Misodango/kyopro/blob/main/ahc/beam.cpp
 // ビームサーチ (acc の main.cpp の `// clang-format on` より下に貼る)
 // 例題: N x N グリッドの (0, 0) から T 手で上下左右に動き、
 //       初めて踏んだマスの得点を集める。「問題ごと」の所を書き換える。

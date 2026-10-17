@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """AHC の全 seed 並列実行。コンテストのディレクトリ (tools/ がある所) で動かす。
+出典: https://github.com/Misodango/kyopro/blob/main/ahc/run.py
 
     python3 ~/kyopro/ahc/run.py                      # seed 0-99 を ./a.out で
     python3 ~/kyopro/ahc/run.py -s 0-29 -j 6 T0=50   # K=V は環境変数 P_K として渡す

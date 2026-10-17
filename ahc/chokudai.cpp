@@ -1,3 +1,4 @@
+// 出典: https://github.com/Misodango/kyopro/blob/main/ahc/chokudai.cpp
 // chokudai サーチ (acc の main.cpp の `// clang-format on` より下に貼る)
 // 例題は beam.cpp と同じグリッドの得点集め。「問題ごと」の所を書き換える。
 // 深さごとに優先度付きキューを持ち、時間いっぱい
